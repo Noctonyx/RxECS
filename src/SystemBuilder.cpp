@@ -3,6 +3,14 @@
 
 namespace ecs
 {
+    SystemBuilder & SystemBuilder::withInheritance(bool inherit)
+    {
+        assert(q);
+        qb.withInheritance(inherit);
+
+        return *this;
+    }
+
     SystemBuilder & SystemBuilder::label(const entity_t label)
     {
         auto sp = world->getUpdate<System>(id);

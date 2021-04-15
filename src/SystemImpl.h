@@ -1,27 +1,50 @@
-
 #include "System.h"
 #include "Query.h"
 
-namespace ecs {
+namespace ecs
+{
     template <class ... TArgs>
     SystemBuilder & SystemBuilder::withQuery()
     {
-        std::set<component_id_t> with = { world->getComponentId<TArgs>()... };
+        std::set<component_id_t> with = {world->getComponentId<TArgs>()...};
         q = world->createQuery(with).id;
         world->getUpdate<System>(id)->query = q;
+
+        qb = QueryBuilder{q, world};
+
         return *this;
     }
 
     template <class ... TArgs>
-    SystemBuilder& SystemBuilder::without()
+    SystemBuilder & SystemBuilder::without()
     {
         assert(q);
-        std::vector<component_id_t> without = { world->getComponentId<TArgs>()... };
-        auto qp = world->getUpdate<Query>(q);
-        for (auto w : without) {
-            qp->without.insert(w);
-        }
+        qb.without<TArgs...>();
 
+        return *this;
+    }
+
+    template <class T, class ... U>
+    SystemBuilder & SystemBuilder::withRelation()
+    {
+        assert(q);
+        qb.withRelation<T, U ...>();
+        return *this;
+    }
+
+    template <class ... TArgs>
+    SystemBuilder & SystemBuilder::withOptional()
+    {
+        assert(q);
+        qb.withOptional<TArgs ...>();
+        return *this;
+    }
+
+    template <class ... TArgs>
+    SystemBuilder & SystemBuilder::withSingleton()
+    {
+        assert(q);
+        qb.withOptional<TArgs ...>();
         return *this;
     }
 
@@ -47,15 +70,15 @@ namespace ecs {
     }
 
     template <typename ... U, typename Func>
-    SystemBuilder & SystemBuilder::each(Func&& f)
+    SystemBuilder & SystemBuilder::each(Func && f)
     {
         assert(q);
         auto s = world->getUpdate<System>(id);
-        
-        auto mp = get_mutable_parameters(f);
-        (void)mp;
 
-        s->queryProcessor = [&](QueryResult& res)
+        auto mp = get_mutable_parameters(f);
+        (void) mp;
+
+        s->queryProcessor = [&](QueryResult & res)
         {
             res.each<U...>(f);
         };
@@ -64,8 +87,9 @@ namespace ecs {
     }
 
     template <typename Func>
-    SystemBuilder& SystemBuilder::execute(Func&& f)
+    SystemBuilder & SystemBuilder::execute(Func && f)
     {
+        assert(!q);
         auto s = world->getUpdate<System>(id);
 
         s->executeProcessor = [&]()

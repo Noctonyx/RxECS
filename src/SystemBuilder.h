@@ -2,6 +2,7 @@
 
 #include <string>
 #include "Entity.h"
+#include "QueryBuilder.h"
 
 namespace ecs
 {
@@ -10,14 +11,27 @@ namespace ecs
     struct SystemBuilder
     {
         systemid_t id;
-        queryid_t q;
+        queryid_t q = 0;
         World* world;
+
+        QueryBuilder qb;
 
         template<class ... TArgs>
         SystemBuilder& withQuery();
 
         template<class ... TArgs>
         SystemBuilder& without();
+
+        template <class T, class ... U>
+        SystemBuilder& withRelation();
+
+        template <class ... TArgs>
+        SystemBuilder& withOptional();
+
+        template <class ... TArgs>
+        SystemBuilder& withSingleton();
+
+        SystemBuilder& withInheritance(bool inherit);
 
         template<typename T>
         SystemBuilder& label();
