@@ -1,6 +1,7 @@
 #include "System.h"
 #include "Query.h"
 #include "QueryImpl.h"
+#include "Stream.h"
 
 namespace ecs
 {
@@ -74,6 +75,8 @@ namespace ecs
     SystemBuilder & SystemBuilder::each(Func && f)
     {
         assert(q);
+        assert(!stream);
+
         auto s = world->getUpdate<System>(id);
 
         auto mp = get_mutable_parameters(f);
@@ -91,11 +94,29 @@ namespace ecs
     SystemBuilder & SystemBuilder::execute(Func && f)
     {
         assert(!q);
+        assert(!stream);
+
         auto s = world->getUpdate<System>(id);
 
         s->executeProcessor = [&]()
         {
             f(world);
+        };
+
+        return *this;
+    }
+
+    template <typename U, typename Func>
+    SystemBuilder & SystemBuilder::execute(Func && f)
+    {
+        assert(!q);
+        assert(stream);
+
+        auto s = world->getUpdate<System>(id);
+
+        s->streamProcessor = [&](Stream * stream)
+        {
+            stream->each<U>(f);
         };
 
         return *this;

@@ -13,8 +13,10 @@
 #include "Table.h"
 #include "SystemBuilder.h"
 
+
 namespace ecs
 {
+    struct Stream;
     struct Query;
 
     struct EntityEntry
@@ -143,6 +145,13 @@ namespace ecs
         const void* getSingleton(component_id_t componentId);
         void* getSingletonUpdate(component_id_t componentId);
 
+        template <typename T>
+        streamid_t createStream();
+        streamid_t createStream(component_id_t id);
+
+        void deleteStream(streamid_t id);
+        Stream * getStream(streamid_t id);    
+
         const Component * getComponentDetails(component_id_t id);
 
         template <typename T>
@@ -194,6 +203,7 @@ namespace ecs
 
         queryid_t systemQuery;
         queryid_t queryQuery = 0;
+        queryid_t streamQuery = 0;
 
         std::vector<DeferredCommand> deferredCommands;
 
@@ -300,6 +310,12 @@ namespace ecs
     T * World::getSingletonUpdate()
     {
         return getSingletonUpdate(getComponentId<T>());
+    }
+
+    template <typename T>
+    streamid_t World::createStream()
+    {
+        return createStream(getComponentId<T>());
     }
 
     template <typename T>

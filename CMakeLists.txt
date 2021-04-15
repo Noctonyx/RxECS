@@ -22,7 +22,9 @@ add_library(RxECS STATIC
     src/QueryBuilder.h 
     src/QueryImpl.h
     src/SystemBuilder.cpp
-)
+    src/Stream.h
+    src/Stream.cpp
+    )
 
  add_executable(RxECS_tests 
     test/TestMain.cpp
@@ -30,11 +32,14 @@ add_library(RxECS STATIC
     test/WorldTests.cpp
     test/QueryTests.cpp
     test/TestComponents.h 
-    test/SystemTests.cpp)
+    test/SystemTests.cpp 
+    test/StreamTests.cpp
+    )
 
 target_link_libraries(RxECS_tests PRIVATE RxECS)
 
 target_include_directories(RxECS PUBLIC "src")
+target_include_directories(RxECS INTERFACE "include")
 target_compile_options(RxECS PUBLIC -DNOMINMAX)
 
 if (MSVC)

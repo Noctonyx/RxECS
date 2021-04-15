@@ -90,6 +90,12 @@ namespace ecs
         count--;
     }
 
+    void Column::clear()
+    {
+        componentDestructor(ptr, componentSize, count);
+        count = 0;
+    }
+
     void * Column::getEntry(const uint32_t row) const
     {
         assert(row < count);

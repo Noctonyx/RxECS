@@ -36,5 +36,7 @@ namespace ecs
         void removeEntry(uint32_t row, bool destroy);
         void* getEntry(uint32_t row) const;
         void setEntry(uint32_t row, const void * srcPtr) const;
+
+        void clear();
     };
 }

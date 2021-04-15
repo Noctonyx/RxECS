@@ -19,14 +19,17 @@ namespace ecs
 
     struct System
     {
-        queryid_t query;
+        queryid_t query = 0;
         World* world;
         std::function<void(QueryResult&)> queryProcessor;
         std::function<void()> executeProcessor;
+        std::function<void(Stream *)> streamProcessor;
         bool enabled = true;
         std::set<entity_t> labels;
         std::set<entity_t> befores;
         std::set<entity_t> afters;
+
+        streamid_t stream = 0;
         //bool dirtyOrder = true;
     };
 

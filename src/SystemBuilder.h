@@ -12,12 +12,15 @@ namespace ecs
     {
         systemid_t id;
         queryid_t q = 0;
+        streamid_t stream = 0;
         World* world;
 
         QueryBuilder qb;
 
         template<class ... TArgs>
         SystemBuilder& withQuery();
+
+        SystemBuilder& withStream(streamid_t);
 
         template<class ... TArgs>
         SystemBuilder& without();
@@ -52,6 +55,9 @@ namespace ecs
         SystemBuilder & each(Func&& f);
 
         template <typename Func>
+        SystemBuilder& execute(Func&& f);
+
+        template <typename U, typename Func>
         SystemBuilder& execute(Func&& f);
     };
 }

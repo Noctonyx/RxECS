@@ -7,6 +7,7 @@
 #include "QueryResult.h"
 #include "System.h"
 #include "QueryImpl.h"
+#include "Stream.h"
 
 namespace ecs
 {
@@ -40,6 +41,7 @@ namespace ecs
 
         // query to find systems
         systemQuery = createQuery<System>().withRelation<SetForSystem, SystemSet>().id;
+        streamQuery = createQuery<StreamComponent>().id;
     }
 
     World::~World()
@@ -229,6 +231,33 @@ namespace ecs
         return getUpdate(0, componentId);
     }
 
+    streamid_t World::createStream(component_id_t id)
+    {
+        auto s = new Stream(id, this);
+        auto e = newEntity();
+        set<StreamComponent>(e, {s});
+
+        return e;
+    }
+
+    void World::deleteStream(streamid_t id)
+    {
+        auto p = getUpdate<StreamComponent>(id);
+        assert(p);
+        delete p->ptr;
+        p->ptr = nullptr;
+        destroy(id);
+    }
+
+    Stream * World::getStream(streamid_t id)
+    {
+        assert(isAlive(id));
+        auto p = get<StreamComponent>(id);
+        assert(p);
+
+        return p->ptr;
+    }
+
     const Component * World::getComponentDetails(component_id_t id)
     {
         if (id == componentBootstrapId) {
@@ -252,7 +281,7 @@ namespace ecs
         auto s = newEntity();
         set<System>(s, std::move(System{.query = 0, .world = this}));
 
-        return SystemBuilder{s, 0, this};
+        return SystemBuilder{s, 0, 0, this};
     }
 
     void World::deleteQuery(queryid_t q)
@@ -293,16 +322,18 @@ namespace ecs
 
         if (anyDirty) {
 #endif
-            recalculateSystemOrder();
+        recalculateSystemOrder();
 #if 0
         }
 #endif
-        for(auto s: systemOrder) {
+        for (auto s: systemOrder) {
             if (isAlive(s)) {
-                if(auto system = get<System>(s); system) {
+                if (auto system = get<System>(s); system) {
                     if (system->query) {
                         auto res = getResults(system->query);
                         system->queryProcessor(res);
+                    } else if (system->stream) {
+                        system->streamProcessor(getStream(system->stream));
                     } else {
                         system->executeProcessor();
                     }
@@ -310,6 +341,10 @@ namespace ecs
                 }
             }
         }
+        getResults(streamQuery).each<StreamComponent>([](World *, entity_t, StreamComponent * s)
+        {
+            s->ptr->clear();
+        });
     }
 
     void World::executeDeferred()
@@ -404,52 +439,53 @@ namespace ecs
         std::deque<std::pair<entity_t, System *>> toProcess;
         std::unordered_map<entity_t, std::set<entity_t>> ready;
 
-        getResults(systemQuery).each<System, SystemSet>([&](World* , entity_t e, System* s, const SystemSet * set)
-        {
-            if((set &&!set->enabled) || !s->enabled) {
-                return;
-            }
-            toProcess.push_back({ e, s });
-        });
+        getResults(systemQuery).each<System, SystemSet>(
+            [&](World *, entity_t e, System * s, const SystemSet * set)
+            {
+                if ((set && !set->enabled) || !s->enabled) {
+                    return;
+                }
+                toProcess.push_back({e, s});
+            });
 
-        for(auto &[e, s]: toProcess) {
-            for(auto & l: s->labels) {
+        for (auto & [e, s]: toProcess) {
+            for (auto & l: s->labels) {
                 labelCounts[l]++;
             }
 
-            for (auto& l : s->befores) {
+            for (auto & l: s->befores) {
                 labelPreCounts[l]++;
             }
         }
 
-        while(!toProcess.empty()) {
+        while (!toProcess.empty()) {
             auto [entity, system] = toProcess.front();
 
             bool canProcess = true;
 
-            for(auto & af: system->afters) {
-                if(labelCounts[af] > 0) {
+            for (auto & af: system->afters) {
+                if (labelCounts[af] > 0) {
                     canProcess = false;
                 }
             }
 
-            for (auto& af : system->labels) {
+            for (auto & af: system->labels) {
                 if (labelPreCounts[af] > 0) {
                     canProcess = false;
                 }
             }
 
-            if(!canProcess) {
+            if (!canProcess) {
                 auto ns = toProcess.front();
                 toProcess.pop_front();
                 toProcess.push_back(ns);
                 continue;
             }
 
-            for (auto& af : system->labels) {
-                labelCounts[af]--;                
+            for (auto & af: system->labels) {
+                labelCounts[af]--;
             }
-            for (auto& bf : system->befores) {
+            for (auto & bf: system->befores) {
                 labelPreCounts[bf]--;
             }
             systemOrder.push_back(entity);
