@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-add_library(ECS STATIC 
+add_library(RxECS STATIC 
     src/Table.h
     src/Column.h
     src/Entity.h
@@ -24,7 +24,7 @@ add_library(ECS STATIC
     src/SystemBuilder.cpp
 )
 
- add_executable(ECS_tests 
+ add_executable(RxECS_tests 
     test/TestMain.cpp
     test/doctest.h
     test/WorldTests.cpp
@@ -32,15 +32,15 @@ add_library(ECS STATIC
     test/TestComponents.h 
     test/SystemTests.cpp)
 
-target_link_libraries(ECS_tests PRIVATE ECS)
+target_link_libraries(RxECS_tests PRIVATE RxECS)
 
-target_include_directories(ECS PUBLIC "src")
-target_compile_options(ECS PUBLIC -DNOMINMAX)
+target_include_directories(RxECS PUBLIC "src")
+target_compile_options(RxECS PUBLIC -DNOMINMAX)
 
 if (MSVC)
-    target_compile_options(ECS PUBLIC /W4 /WX -D_CRT_SECURE_NO_WARNINGS -D_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING -DWIN32_LEAN_AND_MEAN)
+    target_compile_options(RxECS PUBLIC /W4 /WX -D_CRT_SECURE_NO_WARNINGS -D_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING -DWIN32_LEAN_AND_MEAN)
 endif ()
 
-set_target_properties(ECS PROPERTIES CXX_STANDARD 20)
-set_target_properties(ECS_tests PROPERTIES CXX_STANDARD 20)
+set_target_properties(RxECS PROPERTIES CXX_STANDARD 20)
+set_target_properties(RxECS_tests PROPERTIES CXX_STANDARD 20)
 
