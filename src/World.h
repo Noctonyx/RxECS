@@ -150,13 +150,9 @@ namespace ecs
 
         QueryBuilder createQuery(const std::set<component_id_t> & with);
 
-
-
         template <class ... TArgs>
         QueryBuilder createQuery();
 
-//        template <class ... TArgs>
-        //SystemBuilder createSystem();
         SystemBuilder createSystem();
 
         void deleteQuery(queryid_t q);
@@ -340,11 +336,4 @@ namespace ecs
         std::set<component_id_t> with = { getComponentId<TArgs>()... };
         return createQuery(with);
     }
-#if 0
-    template <typename ... Components>
-    Query<Components...> * World::query()
-    {
-        return new Query<Components ...>(this);
-    }
-#endif
 }

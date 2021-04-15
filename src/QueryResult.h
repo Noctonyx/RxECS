@@ -50,7 +50,7 @@ namespace ecs
         bool operator !=(const QueryResultChunkRowIterator & rhs) const
         {
             return row != rhs.row;
-        };
+        }
 
         QueryResultChunkRowIterator & operator++();
         uint32_t operator*() const;
