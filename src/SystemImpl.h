@@ -1,5 +1,6 @@
 #include "System.h"
 #include "Query.h"
+#include "QueryImpl.h"
 
 namespace ecs
 {

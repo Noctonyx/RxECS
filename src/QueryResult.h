@@ -66,12 +66,10 @@ namespace ecs
 
     public:
         void checkIndex(uint32_t rowIndex) const;
-        //const std::span<entity_t> entities() const;
         [[nodiscard]] entity_t entity(uint32_t rowIndex) const;
-        //const void * getColumn(component_id_t comp) const;
         [[nodiscard]] const void * get(component_id_t comp, uint32_t row) const;
-        //void * getUpdateColumn(component_id_t comp) const;
         void checkValidity() const;
+
         [[nodiscard]] void * getUpdate(component_id_t comp, uint32_t row) const;
 
         template <typename T>
@@ -92,13 +90,6 @@ namespace ecs
             return static_cast<T *>(getUpdate(world->getComponentId<T>(), row));
         }
 
-#if 0
-        template <typename T>
-        const T * rowComponent(const uint32_t row)
-        {
-            return get<T>(row);
-        }
-#endif
         template <typename T> //, typename U, typename=std::enable_if_t<!std::is_const<U>::value>>
         T * rowComponent(const uint32_t row)
         {
@@ -202,6 +193,7 @@ namespace ecs
                               uint32_t row,
                               component_id_t componentId,
                               bool mutate);
+
         const void * checkInstancing(entity_t entity,
                                      component_id_t componentId,
                                      bool mutate);
@@ -212,59 +204,77 @@ namespace ecs
                             Tuple & t,
                             const uint32_t row,
                             const component_id_t componentId,
-                            bool mutate)
-        {
-            void * result_ptr = checkTables(chunk, componentId, row, mutate);
+                            bool mutate);
 
-            if (!result_ptr) {
-                result_ptr = checkRelations(chunk, row, componentId, mutate);
-            }
-            if (!result_ptr && !mutate && inheritance) {
-                result_ptr = const_cast<void *>(checkInstancing(entity, componentId, mutate));
-            }
-            if (!result_ptr) {
-                result_ptr = checkSingletons(componentId, mutate);
-            }
-
-            std::get<I>(t) = static_cast<std::tuple_element_t<I, Tuple>>(result_ptr);
-        }
-
-        template <std::size_t Fixed, typename Tuple, typename Comps, typename Muts, std::size_t ...
-                  I>
+        template <std::size_t Fixed, typename Tuple, typename Comps, typename Muts, std::size_t ... I>
         void populateResult(entity_t entity,
                             QueryResultChunk & chunk,
                             Tuple & result,
                             Comps & comps,
                             Muts & muts,
                             const uint32_t row,
-                            std::index_sequence<I...>)
-        {
-            (setResultValue<Tuple, I + Fixed>(entity, chunk, result, row, comps[I], muts[I + Fixed])  , ...);
-        }
+                            std::index_sequence<I...>);
 
         template <typename ... U, typename Func>
-        void each(Func && f)
-        {
-            std::array<component_id_t, sizeof...(U)> comps = {
-                world->getComponentId<std::remove_const_t<U>>()...
-            };
-            auto mp = get_mutable_parameters(f);
-            //auto mutable_comp_params = std::span(&(mp[2]), mp.size() - 2);
-            std::tuple<World *, entity_t, U *...> result;
+        void each(Func && f);
+    };
 
-            //            constexpr auto j = std::make_integer_sequence<uint32_t, sizeof...(U) + 2>();
-            std::get<0>(result) = world;
+    template <typename Tuple, std::size_t I>
+    void QueryResult::setResultValue(entity_t entity,
+                                     QueryResultChunk & chunk,
+                                     Tuple & t,
+                                     const uint32_t row,
+                                     const component_id_t componentId,
+                                     bool mutate)
+    {
+        void * result_ptr = checkTables(chunk, componentId, row, mutate);
 
-            for (auto & chunk: *this) {
-                for (auto row: chunk) {
-                    std::get<1>(result) = chunk.entity(row);
-                    populateResult<std::tuple_size<decltype(result)>() - sizeof...(U)>(
-                        chunk.entity(row), chunk, result, comps, mp, row,
-                        std::make_index_sequence<sizeof...(U)>()
-                    );
-                    std::apply(f, result);
-                }
+        if (!result_ptr) {
+            result_ptr = checkRelations(chunk, row, componentId, mutate);
+        }
+        if (!result_ptr && !mutate && inheritance) {
+            result_ptr = const_cast<void *>(checkInstancing(entity, componentId, mutate));
+        }
+        if (!result_ptr) {
+            result_ptr = checkSingletons(componentId, mutate);
+        }
+
+        std::get<I>(t) = static_cast<std::tuple_element_t<I, Tuple>>(result_ptr);
+    }
+
+    template <std::size_t Fixed, typename Tuple, typename Comps, typename Muts, std::size_t... I>
+    void QueryResult::populateResult(entity_t entity,
+                                     QueryResultChunk & chunk,
+                                     Tuple & result,
+                                     Comps & comps,
+                                     Muts & muts,
+                                     const uint32_t row,
+                                     std::index_sequence<I...>)
+    {
+        (setResultValue<Tuple, I + Fixed>(entity, chunk, result, row, comps[I], muts[I + Fixed]), ...);
+    }
+
+    template <typename ... U, typename Func>
+    void QueryResult::each(Func && f)
+    {
+        std::array<component_id_t, sizeof...(U)> comps = {
+            world->getComponentId<std::remove_const_t<U>>()...
+        };
+        auto mp = get_mutable_parameters(f);
+
+        std::tuple<World *, entity_t, U *...> result;
+
+        std::get<0>(result) = world;
+
+        for (auto & chunk: *this) {
+            for (auto row: chunk) {
+                std::get<1>(result) = chunk.entity(row);
+                populateResult<std::tuple_size<decltype(result)>() - sizeof...(U)>(
+                    chunk.entity(row), chunk, result, comps, mp, row,
+                    std::make_index_sequence<sizeof...(U)>()
+                );
+                std::apply(f, result);
             }
         }
-    };
+    }
 }
