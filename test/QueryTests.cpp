@@ -61,15 +61,12 @@ TEST_SUITE("Queries")
         ecs::World w;
 
         const auto c = 100;
-        //TestComponent::c = 0;
 
         std::vector<ecs::entity_t> e;
         for (uint32_t i = 0; i < c; i++) {
             auto x = w.newEntity().set<TestComponent>({i});
             e.push_back(x.id);
         }
-
-        //CHECK(TestComponent::c == c);
 
         auto q1 = w.createQuery<TestComponent>().id;
 
@@ -93,15 +90,12 @@ TEST_SUITE("Queries")
         ecs::World w;
 
         const auto c = 100;
-        //TestComponent::c = 0;
 
         std::vector<ecs::entity_t> e;
         for (uint32_t i = 0; i < c; i++) {
             auto x = w.newEntity().set<TestComponent>({i});
             e.push_back(x.id);
         }
-
-        //CHECK(TestComponent::c == c);
 
         auto q1 = w.createQuery<TestComponent>().id;
 
@@ -125,15 +119,12 @@ TEST_SUITE("Queries")
         ecs::World w;
 
         const auto c = 100;
-        //TestComponent::c = 0;
 
         std::vector<ecs::entity_t> e;
         for (uint32_t i = 0; i < c; i++) {
             auto x = w.newEntity().set<TestComponent>({i});
             e.push_back(x.id);
         }
-
-        //CHECK(TestComponent::c == c);
 
         auto q1 = w.createQuery<TestComponent>().id;
 
@@ -161,8 +152,6 @@ TEST_SUITE("Queries")
     {
         ecs::World w;
 
-        //const auto c = 6;
-
         auto x = w.newEntity().set<TestComponent>({2});
 
         auto q1 = w.createQuery<TestComponent>().id;
@@ -182,8 +171,6 @@ TEST_SUITE("Queries")
     TEST_CASE("Query can update components")
     {
         ecs::World w;
-
-        //const auto c = 6;
 
         auto x = w.newEntity().set<TestComponent>({2});
 
@@ -216,9 +203,7 @@ TEST_SUITE("Queries")
     {
         ecs::World w;
 
-        //const auto c = 6;
-
-        auto x = w.newEntity().set<TestComponent>({2});
+        w.newEntity().set<TestComponent>({2});
 
         auto q1 = w.createQuery<TestComponent>().id;
         {
@@ -239,18 +224,16 @@ TEST_SUITE("Queries")
     {
         ecs::World world;
 
-        //const auto c = 6;
-
-        auto x = world.newEntity().set<TestComponent>({2});
+        world.newEntity().set<TestComponent>({2});
 
         auto q1 = world.createQuery<TestComponent>().id;
         {
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent>(
-                [](ecs::World * w, ecs::entity_t e, const TestComponent * c)
+                [](ecs::EntityBuilder e, const TestComponent * c)
                 {
                     CHECK(c->x == 2);
-                    CHECK(w->has<TestComponent>(e));
+                    CHECK(e.has<TestComponent>());
                 });
         }
         world.deleteQuery(q1);
@@ -271,7 +254,7 @@ TEST_SUITE("Queries")
         {
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent>(
-                [](ecs::World *, ecs::entity_t, const TestComponent * c1)
+                [](ecs::EntityBuilder, const TestComponent * c1)
                 {
                     auto j = c1->x;
                     (void) j;
@@ -284,11 +267,9 @@ TEST_SUITE("Queries")
     {
         ecs::World world;
 
-        //const auto c = 6;
+        world.newEntity().set<TestComponent>({2});
 
-        auto x = world.newEntity().set<TestComponent>({2});
-
-        auto y = world.newEntity().set<TestComponent>({3}).set<TestComponent2>({7, ""});
+        world.newEntity().set<TestComponent>({3}).set<TestComponent2>({7, ""});
 
         int c1 = 0;
         int c2 = 0;
@@ -298,8 +279,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [&c1, &c2](
-                ecs::World *,
-                ecs::entity_t,
+                ecs::EntityBuilder,
                 const TestComponent *,
                 const TestComponent2 * p)
                 {
@@ -317,8 +297,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [&c1, &c2](
-                ecs::World *,
-                ecs::entity_t,
+                ecs::EntityBuilder,
                 const TestComponent *,
                 TestComponent2 * p)
                 {
@@ -338,8 +317,6 @@ TEST_SUITE("Queries")
     {
         ecs::World world;
 
-        //const auto c = 6;
-
         auto x = world.newEntity().set<TestComponent>({2});
 
         auto y = world.newEntity();
@@ -352,17 +329,16 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2, TestRelation>(
                 [](
-                ecs::World * w,
-                ecs::entity_t e,
+                ecs::EntityBuilder e,
                 const TestComponent * c,
                 const TestComponent2 * p,
                 const TestRelation * r)
                 {
-                    CHECK(w->isAlive(r->entity));
+                    CHECK(e.world->isAlive(r->entity));
                     CHECK(c->x == 2);
                     CHECK(p->y == 7);
-                    CHECK(w->has<TestComponent>(e));
-                    CHECK(!w->has<TestComponent2>(e));
+                    CHECK(e.has<TestComponent>());
+                    CHECK(!e.has<TestComponent2>());
                 });
         }
 
@@ -370,17 +346,16 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2, TestRelation>(
                 [](
-                ecs::World * w,
-                ecs::entity_t e,
+                ecs::EntityBuilder e,
                 const TestComponent * c,
                 TestComponent2 * p,
                 TestRelation * r)
                 {
-                    CHECK(w->isAlive(r->entity));
+                    CHECK(e.world->isAlive(r->entity));
                     CHECK(c->x == 2);
                     CHECK(p->y == 7);
-                    CHECK(w->has<TestComponent>(e));
-                    CHECK(!w->has<TestComponent2>(e));
+                    CHECK(e.has<TestComponent>());
+                    CHECK(!e.has<TestComponent2>());
                 });
         }
 
@@ -391,11 +366,8 @@ TEST_SUITE("Queries")
     {
         ecs::World world;
 
-        //const auto c = 6;
-
-
         auto y = world.newEntity().set<TestComponent2>({7, ""});
-        auto x = world.newEntity().set<TestComponent>({2}).set<TestRelation>({{y.id}});
+        world.newEntity().set<TestComponent>({2}).set<TestRelation>({{y.id}});
 
         y.destroy();
 
@@ -405,16 +377,15 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2, TestRelation>(
                 [](
-                ecs::World * w,
-                ecs::entity_t e,
+                ecs::EntityBuilder e,
                 const TestComponent * c,
                 const TestComponent2 * p,
                 const TestRelation *)
                 {
                     CHECK(p == nullptr);
                     CHECK(c->x == 2);
-                    CHECK(w->has<TestComponent>(e));
-                    CHECK(!w->has<TestComponent2>(e));
+                    CHECK(e.has<TestComponent>());
+                    CHECK(!e.has<TestComponent2>());
                 });
         }
         world.deleteQuery(q1);
@@ -424,9 +395,7 @@ TEST_SUITE("Queries")
     {
         ecs::World world;
 
-        //const auto c = 6;
-
-        auto x = world.newEntity() .set<TestComponent>( {2});
+        world.newEntity().set<TestComponent>({2});
         world.setSingleton<TestComponent2>({7, ""});
 
         auto q1 = world
@@ -436,16 +405,15 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [](
-                ecs::World * w,
-                ecs::entity_t e,
+                ecs::EntityBuilder e,
                 const TestComponent * c,
                 TestComponent2 * p)
                 {
                     CHECK(p != nullptr);
                     CHECK(p->y == 7);
                     CHECK(c->x == 2);
-                    CHECK(w->has<TestComponent>(e));
-                    CHECK(!w->has<TestComponent2>(e));
+                    CHECK(e.has<TestComponent>());
+                    CHECK(!e.has<TestComponent2>());
                 });
         }
 
@@ -455,15 +423,14 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [](
-                ecs::World * w,
-                ecs::entity_t e,
+                ecs::EntityBuilder e,
                 const TestComponent * c,
                 const TestComponent2 * p)
                 {
                     CHECK(p == nullptr);
                     CHECK(c->x == 2);
-                    CHECK(w->has<TestComponent>(e));
-                    CHECK(!w->has<TestComponent2>(e));
+                    CHECK(e.has<TestComponent>());
+                    CHECK(!e.has<TestComponent2>());
                 });
         }
         world.deleteQuery(q1);
@@ -473,8 +440,6 @@ TEST_SUITE("Queries")
     {
         ecs::World world;
 
-        //const auto c = 6;
-
         auto x = world.newEntity();
         auto y = world.newEntity();
         auto z = world.newEntity();
@@ -483,8 +448,8 @@ TEST_SUITE("Queries")
         y.set<TestComponent2>({.y = 5});
         z.set<TestComponent3>({.w = 11});
 
-        x.set<ecs::InstanceOf>({y.id});
-        y.set<ecs::InstanceOf>({z.id});
+        x.set<ecs::InstanceOf>({{y.id}});
+        y.set<ecs::InstanceOf>({{z.id}});
 
         auto q1 = world
                   .createQuery<TestComponent>()
@@ -493,16 +458,15 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [](
-                ecs::World * w,
-                ecs::entity_t e,
+                ecs::EntityBuilder e,
                 TestComponent * c,
                 const TestComponent2 * p)
                 {
                     CHECK(p != nullptr);
                     CHECK(p->y == 5);
                     CHECK(c->x == 1);
-                    CHECK(w->has<TestComponent>(e));
-                    CHECK(!w->has<TestComponent2>(e));
+                    CHECK(e.has<TestComponent>());
+                    CHECK(!e.has<TestComponent2>());
                 });
         }
         q1 = world
@@ -512,15 +476,14 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [](
-                ecs::World * w,
-                ecs::entity_t e,
+                ecs::EntityBuilder e,
                 TestComponent * c,
                 TestComponent2 * p)
                 {
                     CHECK(p == nullptr);
                     CHECK(c->x == 1);
-                    CHECK(w->has<TestComponent>(e));
-                    CHECK(!w->has<TestComponent2>(e));
+                    CHECK(e.has<TestComponent>());
+                    CHECK(!e.has<TestComponent2>());
                 });
         }
 
@@ -531,15 +494,14 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [](
-                ecs::World * w,
-                ecs::entity_t e,
+                ecs::EntityBuilder e,
                 TestComponent * c,
                 const TestComponent2 * p)
                 {
                     CHECK(p == nullptr);
                     CHECK(c->x == 1);
-                    CHECK(w->has<TestComponent>(e));
-                    CHECK(!w->has<TestComponent2>(e));
+                    CHECK(e.has<TestComponent>());
+                    CHECK(!e.has<TestComponent2>());
                 });
         }
 
@@ -550,15 +512,14 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent3, TestComponent2>(
                 [](
-                ecs::World * w,
-                ecs::entity_t e,
+                ecs::EntityBuilder e,
                 TestComponent3 * c,
                 const TestComponent2 * p)
                 {
                     CHECK(p == nullptr);
                     CHECK(c->w == 11);
-                    CHECK(w->has<TestComponent3>(e));
-                    CHECK(!w->has<TestComponent2>(e));
+                    CHECK(e.has<TestComponent3>());
+                    CHECK(!e.has<TestComponent2>());
                 });
         }
 

@@ -44,5 +44,10 @@ namespace ecs
 
         bool isAlive() const;
         EntityBuilder& destroy();
+
+        bool operator==(const EntityBuilder & o) const
+        {
+            return o.id == id && o.world == world;
+        }
     };
 }

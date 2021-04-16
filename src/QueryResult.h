@@ -262,13 +262,13 @@ namespace ecs
         };
         auto mp = get_mutable_parameters(f);
 
-        std::tuple<World *, entity_t, U *...> result;
+        std::tuple<EntityBuilder, U *...> result;
 
-        std::get<0>(result) = world;
+        //std::get<0>(result) = world;
 
         for (auto & chunk: *this) {
             for (auto row: chunk) {
-                std::get<1>(result) = chunk.entity(row);
+                std::get<0>(result) = EntityBuilder{ chunk.entity(row), world };
                 populateResult<std::tuple_size<decltype(result)>() - sizeof...(U)>(
                     chunk.entity(row), chunk, result, comps, mp, row,
                     std::make_index_sequence<sizeof...(U)>()

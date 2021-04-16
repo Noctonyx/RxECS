@@ -125,19 +125,19 @@ TEST_SUITE("World")
             }
         }
         SUBCASE("Bulk") {
-            Carrier c2(nullptr);
+            Carrier c2{ nullptr };
             auto e = w.newEntity().set<Carrier>(c);
             CHECK(c.p.use_count() == 2);
             CHECK(!wp.expired());
 
             for (int i = 0; i < 200; i++) {
-                auto e1 = w.newEntity().set<Carrier>(c2);
+                w.newEntity().set<Carrier>(c2);
             }
             CHECK(c.p.use_count() == 2);
             CHECK(!wp.expired());
             c.p.reset();
             for (int i = 0; i < 200; i++) {
-                auto e1 = w.newEntity().set<Carrier>(c2);
+                w.newEntity().set<Carrier>(c2);
             }
             //CHECK(c.p.use_count() == 1);
             CHECK(!wp.expired());
@@ -330,7 +330,7 @@ TEST_SUITE("World")
 
         SUBCASE("Set") {
             {
-                auto f = [&e, &w]()
+                auto f = [&e]()
                 {
                     e.setDeferred<TestComponent2>( {.y = 5, .z = "Hello"});
                 };
@@ -346,7 +346,7 @@ TEST_SUITE("World")
 
         SUBCASE("Set 2") {
             {
-                auto f = [&e, &w]()
+                auto f = [&e]()
                 {
                     e.setDeferred<TestComponent>( {.x=5});
                 };
@@ -369,7 +369,7 @@ TEST_SUITE("World")
             auto e = w.newEntity("Name1");
             auto j = w.lookup("Name1");
 
-            CHECK(e.id == j);
+            CHECK(e == j);
         }
 
         SUBCASE("Lookup with string") {
@@ -378,18 +378,18 @@ TEST_SUITE("World")
             auto e = w.newEntity("A String");
             auto j = w.lookup(x);
 
-            CHECK(e.id == j);
+            CHECK(e == j);
         }
 
         SUBCASE("Set via update ") {
             auto e = w.newEntity().set<ecs::Name>({"A Name"});
             auto j = w.lookup("A Name");
 
-            CHECK(e.id == j);
+            CHECK(e == j);
 
             e.remove<ecs::Name>();
             j = w.lookup("A Name");
-            CHECK(!w.isAlive(j));
+            CHECK(!j.isAlive());
         }
     }
 }

@@ -87,8 +87,8 @@ namespace ecs
         //entity_t newEntity();
         EntityBuilder instantiate(entity_t prefab);
 
-        entity_t lookup(const char* name);
-        entity_t lookup(const std::string & name);
+        EntityBuilder lookup(const char* name);
+        EntityBuilder lookup(const std::string & name);
 
         [[nodiscard]] bool isAlive(entity_t id) const;
         void destroy(entity_t id);

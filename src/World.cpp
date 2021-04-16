@@ -98,16 +98,16 @@ namespace ecs
         return e;
     }
 
-    entity_t World::lookup(const char * name)
+    EntityBuilder World::lookup(const char * name)
     {
         if (nameIndex.contains(name)) {
-            return nameIndex[name];
+            return {nameIndex[name], this};
         }
 
-        return 0;
+        return {0, this};
     }
 
-    entity_t World::lookup(const std::string & name)
+    EntityBuilder World::lookup(const std::string & name)
     {
         return lookup(name.c_str());
     }
@@ -325,7 +325,7 @@ namespace ecs
         auto s = newEntity();
         s.set<System>(System{.query = 0, .world = this});
 
-        return SystemBuilder{s.id, 0, 0, this};
+        return SystemBuilder{s.id, 0, 0, this, {}};
     }
 
     void World::deleteQuery(queryid_t q)
@@ -385,7 +385,7 @@ namespace ecs
                 }
             }
         }
-        getResults(streamQuery).each<StreamComponent>([](World *, entity_t, StreamComponent * s)
+        getResults(streamQuery).each<StreamComponent>([](EntityBuilder, StreamComponent * s)
         {
             s->ptr->clear();
         });
@@ -442,7 +442,7 @@ namespace ecs
         /* This will only be 0 during world bootstrap, ie when we are adding queryquery */
         if (queryQuery) {
             getResults(queryQuery)
-                .each<Query>([&table, &ad](World *, entity_t, Query * aq)
+                .each<Query>([&table, &ad](EntityBuilder, Query * aq)
                     {
                         assert(aq);
                         if (aq->interestedInArchetype(ad)) {
@@ -484,12 +484,12 @@ namespace ecs
         std::unordered_map<entity_t, std::set<entity_t>> ready;
 
         getResults(systemQuery).each<System, SystemSet>(
-            [&](World *, entity_t e, System * s, const SystemSet * set)
+            [&](EntityBuilder e, System * s, const SystemSet * set)
             {
                 if ((set && !set->enabled) || !s->enabled) {
                     return;
                 }
-                toProcess.push_back({e, s});
+                toProcess.push_back({e.id, s});
             });
 
         for (auto & [e, s]: toProcess) {

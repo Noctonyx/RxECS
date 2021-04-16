@@ -10,14 +10,14 @@ TEST_SUITE("Systems")
     {
         ecs::World world;
 
-        const auto entity = world.newEntity().set<TestComponent>({2});
+        world.newEntity().set<TestComponent>({2});
 
         uint32_t zz = 0;
 
         auto system = world.createSystem().withQuery<TestComponent>()
                            .without<TestComponent2>()
                            .each<TestComponent>(
-                               [&zz](ecs::World *, ecs::entity_t, const TestComponent * xy)
+                               [&zz](ecs::EntityBuilder, const TestComponent * xy)
                                {
                                    zz = xy->x;
                                });
@@ -34,7 +34,7 @@ TEST_SUITE("Systems")
     TEST_CASE("System Ordering")
     {
         ecs::World world;
-        const auto entity = world.newEntity().set<TestComponent>({2});
+        world.newEntity().set<TestComponent>({2});
 
         struct Label1 {};
         struct Label2 {};
@@ -42,37 +42,37 @@ TEST_SUITE("Systems")
 
         int c = 0;
 
-        auto sys1 = world.createSystem().withQuery<TestComponent>()
-                         .label<Label1>()
-                         .label<Label3>()
-                         .after<Label2>()
-                         .each<TestComponent>([&c](ecs::World *, ecs::entity_t, TestComponent *)
-                         {
-                             c++;
-                             CHECK(c == 3);
-                         });
-        auto sys2 = world.createSystem().withQuery<TestComponent>()
-                         .label<Label2>()
-                         .each<TestComponent>([&c](ecs::World *, ecs::entity_t, TestComponent *)
-                         {
-                             c++;
-                             CHECK(c == 1);
-                         });
-        auto sys3 = world.createSystem().withQuery<TestComponent>()
-                         .label<Label3>()
-                         .each<TestComponent>([&c](ecs::World *, ecs::entity_t, TestComponent *)
-                         {
-                             c++;
-                             CHECK(c == 4);
-                         });
-        auto sys4 = world.createSystem().withQuery<TestComponent>()
-                         .before<Label3>()
-                         .before<Label1>()
-                         .each<TestComponent>([&c](ecs::World *, ecs::entity_t, TestComponent *)
-                         {
-                             c++;
-                             CHECK(c == 2);
-                         });
+        world.createSystem().withQuery<TestComponent>()
+             .label<Label1>()
+             .label<Label3>()
+             .after<Label2>()
+             .each<TestComponent>([&c](ecs::EntityBuilder, TestComponent *)
+             {
+                 c++;
+                 CHECK(c == 3);
+             });
+        world.createSystem().withQuery<TestComponent>()
+             .label<Label2>()
+             .each<TestComponent>([&c](ecs::EntityBuilder, TestComponent *)
+             {
+                 c++;
+                 CHECK(c == 1);
+             });
+        world.createSystem().withQuery<TestComponent>()
+             .label<Label3>()
+             .each<TestComponent>([&c](ecs::EntityBuilder, TestComponent *)
+             {
+                 c++;
+                 CHECK(c == 4);
+             });
+        world.createSystem().withQuery<TestComponent>()
+             .before<Label3>()
+             .before<Label1>()
+             .each<TestComponent>([&c](ecs::EntityBuilder, TestComponent *)
+             {
+                 c++;
+                 CHECK(c == 2);
+             });
         world.step(0.01f);
         c = 0;
         world.step(0.01f);
@@ -81,7 +81,7 @@ TEST_SUITE("Systems")
     TEST_CASE("System Set")
     {
         ecs::World world;
-        const auto entity = world.newEntity().set<TestComponent>({2});
+        world.newEntity().set<TestComponent>({2});
 
         auto sete = world.newEntity().set<ecs::SystemSet>({true});
 
@@ -91,7 +91,7 @@ TEST_SUITE("Systems")
                            .without<TestComponent2>()
                            .withSet(sete.id)
                            .each<TestComponent>(
-                               [&zz](ecs::World *, ecs::entity_t, const TestComponent * xy)
+                               [&zz](ecs::EntityBuilder, const TestComponent * xy)
                                {
                                    zz = xy->x;
                                });
@@ -111,14 +111,14 @@ TEST_SUITE("Systems")
     TEST_CASE("System Disabling")
     {
         ecs::World world;
-        const auto entity = world.newEntity().set<TestComponent>({2});
+        world.newEntity().set<TestComponent>({2});
 
         uint32_t zz = 0;
 
         auto system = world.createSystem().withQuery<TestComponent>()
                            .without<TestComponent2>()
                            .each<TestComponent>(
-                               [&zz](ecs::World *, ecs::entity_t, const TestComponent * xy)
+                               [&zz](ecs::EntityBuilder, const TestComponent * xy)
                                {
                                    zz = xy->x;
                                });
@@ -138,7 +138,7 @@ TEST_SUITE("Systems")
     TEST_CASE("Execute System")
     {
         ecs::World world;
-        const auto entity = world.newEntity().set<TestComponent>({2});
+        world.newEntity().set<TestComponent>({2});
 
         uint32_t zz = 0;
 
