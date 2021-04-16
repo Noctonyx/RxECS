@@ -1,11 +1,8 @@
 #include <random>
 
 #include "doctest.h"
-#include "QueryResult.h"
+#include "RxECS.h"
 #include "TestComponents.h"
-#include "System.h"
-#include "World.h"
-#include "SystemImpl.h"
 
 TEST_SUITE("Systems")
 {
@@ -13,8 +10,7 @@ TEST_SUITE("Systems")
     {
         ecs::World world;
 
-        const auto entity = world.newEntity();
-        world.set<TestComponent>(entity, {2});
+        const auto entity = world.newEntity().set<TestComponent>({2});
 
         uint32_t zz = 0;
 
@@ -38,8 +34,7 @@ TEST_SUITE("Systems")
     TEST_CASE("System Ordering")
     {
         ecs::World world;
-        const auto entity = world.newEntity();
-        world.set<TestComponent>(entity, {2});
+        const auto entity = world.newEntity().set<TestComponent>({2});
 
         struct Label1 {};
         struct Label2 {};
@@ -86,17 +81,15 @@ TEST_SUITE("Systems")
     TEST_CASE("System Set")
     {
         ecs::World world;
-        const auto entity = world.newEntity();
-        world.set<TestComponent>(entity, {2});
+        const auto entity = world.newEntity().set<TestComponent>({2});
 
-        auto sete = world.newEntity();
-        world.set<ecs::SystemSet>(sete, {true});
+        auto sete = world.newEntity().set<ecs::SystemSet>({true});
 
         uint32_t zz = 0;
 
         auto system = world.createSystem().withQuery<TestComponent>()
                            .without<TestComponent2>()
-                           .withSet(sete)
+                           .withSet(sete.id)
                            .each<TestComponent>(
                                [&zz](ecs::World *, ecs::entity_t, const TestComponent * xy)
                                {
@@ -107,7 +100,7 @@ TEST_SUITE("Systems")
 
         CHECK(zz == 2);
         zz = 0;
-        world.getUpdate<ecs::SystemSet>(sete)->enabled = false;
+        sete.getUpdate<ecs::SystemSet>()->enabled = false;
         world.step(0.01f);
 
         CHECK(zz == 0);
@@ -118,8 +111,7 @@ TEST_SUITE("Systems")
     TEST_CASE("System Disabling")
     {
         ecs::World world;
-        const auto entity = world.newEntity();
-        world.set<TestComponent>(entity, {2});
+        const auto entity = world.newEntity().set<TestComponent>({2});
 
         uint32_t zz = 0;
 
@@ -146,8 +138,7 @@ TEST_SUITE("Systems")
     TEST_CASE("Execute System")
     {
         ecs::World world;
-        const auto entity = world.newEntity();
-        world.set<TestComponent>(entity, {2});
+        const auto entity = world.newEntity().set<TestComponent>({2});
 
         uint32_t zz = 0;
 

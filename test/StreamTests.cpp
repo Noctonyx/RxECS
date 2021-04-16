@@ -1,11 +1,8 @@
 #include <random>
 
 #include "doctest.h"
-#include "QueryResult.h"
+#include "RxECS.h"
 #include "TestComponents.h"
-#include "System.h"
-#include "World.h"
-#include "SystemImpl.h"
 
 TEST_SUITE("Streams")
 {

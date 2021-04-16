@@ -9,6 +9,7 @@
 #include "ArchetypeManager.h"
 #include "Component.h"
 #include "Entity.h"
+#include "EntityBuilder.h"
 #include "QueryBuilder.h"
 #include "Table.h"
 #include "SystemBuilder.h"
@@ -82,9 +83,9 @@ namespace ecs
         World();
         ~World();
 
-        entity_t newEntity(const char * name = nullptr );
+        EntityBuilder newEntity(const char * name = nullptr );
         //entity_t newEntity();
-        entity_t instantiate(entity_t prefab);
+        EntityBuilder instantiate(entity_t prefab);
 
         entity_t lookup(const char* name);
         entity_t lookup(const std::string & name);
@@ -341,7 +342,7 @@ namespace ecs
             return componentMap[v];
         }
 
-        component_id_t id = newEntity();
+        component_id_t id = newEntity().id;
         set<Component>(id, {
                            typeid(T).name(),
                            sizeof(T), alignof(T),

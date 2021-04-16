@@ -1,10 +1,8 @@
 #include <random>
 
 #include "doctest.h"
-#include "World.h"
-#include "QueryResult.h"
+#include "RxECS.h"
 #include "TestComponents.h"
-#include "QueryImpl.h"
 
 TEST_SUITE("World")
 {
@@ -13,12 +11,12 @@ TEST_SUITE("World")
         ecs::World w;
 
         auto e = w.newEntity();
-        CHECK(w.isAlive(e));
-        w.destroy(e);
-        CHECK(!w.isAlive(e));
+        CHECK(e.isAlive());
+        e.destroy();
+        CHECK(!e.isAlive());
         auto e2 = w.newEntity();
-        CHECK(w.isAlive(e2));
-        CHECK(!w.isAlive(e));
+        CHECK(e2.isAlive());
+        CHECK(!e.isAlive());
 
         CHECK(!w.isAlive(0));
         CHECK(!w.isAlive(9999999));
@@ -28,9 +26,8 @@ TEST_SUITE("World")
     {
         {
             ecs::World * w = new ecs::World;
-            auto e = w->newEntity();
-            w->add<TestComponent>(e);
-            CHECK(w->has<TestComponent>(e));
+            auto e = w->newEntity().add<TestComponent>();
+            CHECK(e.has<TestComponent>());
             delete w;
         }
     }
@@ -42,30 +39,29 @@ TEST_SUITE("World")
         auto e = w.newEntity();
         auto e2 = w.newEntity();
 
-        w.add<TestComponent>(e);
-        CHECK(w.has<TestComponent>(e));
+        e.add<TestComponent>();
+        CHECK(e.has<TestComponent>());
 
-        w.set<TestComponent>(e, {12});
-        CHECK(w.get<TestComponent>(e)->x == 12);
+        e.set<TestComponent>({12});
+        CHECK(e.get<TestComponent>()->x == 12);
 
-        w.set<TestComponent>(e2, {11});
-        w.set<ecs::Name>(e2, {.name = "Fred"});
-        CHECK(w.has<TestComponent>(e2));
+        e2.set<TestComponent>({11}).set<ecs::Name>({.name = "Fred"});
+        CHECK(e2.has<TestComponent>());
 
-        w.set<TestComponent2>(e, {.y=14});
-        CHECK(w.has<TestComponent2>(e));
-        CHECK(w.has<TestComponent>(e));
-        CHECK(w.get<TestComponent2>(e)->y == 14);
+        e.set<TestComponent2>({.y=14});
+        CHECK(e.has<TestComponent2>());
+        CHECK(e.has<TestComponent>());
+        CHECK(e.get<TestComponent2>()->y == 14);
 
-        w.remove<TestComponent>(e);
-        CHECK(!w.has<TestComponent>(e));
-        CHECK(w.has<TestComponent2>(e));
-        CHECK(w.get<TestComponent2>(e)->y == 14);
-        CHECK(w.has<TestComponent>(e2));
-        CHECK(w.get<TestComponent>(e2)->x == 11);
+        e.remove<TestComponent>();
+        CHECK(!e.has<TestComponent>());
+        CHECK(e.has<TestComponent2>());
+        CHECK(e.get<TestComponent2>()->y == 14);
+        CHECK(e2.has<TestComponent>());
+        CHECK(e2.get<TestComponent>()->x == 11);
 
-        w.destroy(e2);
-        w.destroy(e);
+        e2.destroy();
+        e.destroy();
     }
 
     TEST_CASE("Component lifetime")
@@ -96,60 +92,56 @@ TEST_SUITE("World")
 
         SUBCASE("Set") {
             auto px = c.p;
-            auto e = w.newEntity();
-            w.set<Carrier>(e, c);
+            auto e = w.newEntity().set<Carrier>(c);
             c.p.reset();
             CHECK(!wp.expired());
 
             SUBCASE("And Destroy") {
                 px.reset();
                 CHECK(!wp.expired());
-                w.destroy(e);
+                e.destroy();
                 CHECK(wp.expired());
             }
             SUBCASE("And Add") {
                 px.reset();
                 CHECK(!wp.expired());
-                w.add<TestComponent2>(e);
+                e.add<TestComponent2>();
                 CHECK(!wp.expired());
-                w.destroy(e);
+                e.destroy();
                 CHECK(wp.expired());
             }
             SUBCASE("And Get") {
                 px.reset();
-                auto gg = w.get<Carrier>(e);
+                auto gg = e.get<Carrier>();
                 CHECK(gg->p.use_count() == 1);
                 CHECK(!wp.expired());
-                auto gg2 = w.getUpdate<Carrier>(e);
+                auto gg2 = e.getUpdate<Carrier>();
                 CHECK(gg2->p.use_count() == 1);
                 CHECK(!wp.expired());
                 gg2->p.reset();
                 CHECK(wp.expired());
-                w.destroy(e);
+                e.destroy();
                 CHECK(wp.expired());
             }
         }
         SUBCASE("Bulk") {
             Carrier c2(nullptr);
-            auto e = w.newEntity();
-            w.set<Carrier>(e, c);
+            auto e = w.newEntity().set<Carrier>(c);
             CHECK(c.p.use_count() == 2);
             CHECK(!wp.expired());
 
             for (int i = 0; i < 200; i++) {
-                auto e1 = w.newEntity();
-                w.set<Carrier>(e1, c2);
+                auto e1 = w.newEntity().set<Carrier>(c2);
             }
             CHECK(c.p.use_count() == 2);
             CHECK(!wp.expired());
             c.p.reset();
             for (int i = 0; i < 200; i++) {
-                auto e1 = w.newEntity();
-                w.set<Carrier>(e1, c2);
+                auto e1 = w.newEntity().set<Carrier>(c2);
             }
             //CHECK(c.p.use_count() == 1);
             CHECK(!wp.expired());
-            w.destroy(e);
+            e.destroy();
             CHECK(wp.expired());
         }
     }
@@ -158,7 +150,7 @@ TEST_SUITE("World")
     {
         ecs::World w;
 
-        auto e = w.newEntity();
+        auto e = w.newEntity().id;
 
         CHECK(w.get<TestComponent>(e) == nullptr);
         CHECK(w.getUpdate<TestComponent>(e) == nullptr);
@@ -171,9 +163,8 @@ TEST_SUITE("World")
         const auto c = 1000;
         std::vector<ecs::entity_t> e;
         for (uint32_t i = 0; i < c; i++) {
-            auto x = w.newEntity();
-            w.set<TestComponent>(x, {i});
-            e.push_back(x);
+            auto x = w.newEntity().set<TestComponent>({i});
+            e.push_back(x.id);
         }
 
         auto rng = std::default_random_engine{};
@@ -200,13 +191,10 @@ TEST_SUITE("World")
     {
         ecs::World w;
 
-        auto e = w.newEntity();
-        w.add<TestComponent>(e);
+        auto e = w.newEntity().add<TestComponent>().add<TestTag>();
 
-        w.add<TestTag>(e);
-
-        CHECK(w.has<TestTag>(e));
-        CHECK(w.has<TestComponent>(e));
+        CHECK(e.has<TestTag>());
+        CHECK(e.has<TestComponent>());
     }
 
     TEST_CASE("Singleton support")
@@ -233,25 +221,25 @@ TEST_SUITE("World")
         auto y = world.newEntity();
         auto z = world.newEntity();
 
-        world.set<TestComponent>(x, {1});
-        world.set<TestComponent2>(y, {.y=5});
-        world.set<TestComponent3>(z, {.w=11});
+        x.set<TestComponent>({1});
+        y.set<TestComponent2>({.y=5});
+        x.set<TestComponent3>({.w=11});
 
-        world.set<ecs::InstanceOf>(x, {{.entity = y}});
-        world.set<ecs::InstanceOf>(y, {{.entity = z}});
+        x.set<ecs::InstanceOf>({{.entity = y.id}});
+        y.set<ecs::InstanceOf>({{.entity = z.id}});
 
-        const TestComponent2 * p = world.get<TestComponent2>(x);
+        const TestComponent2 * p = x.get<TestComponent2>();
         CHECK(p == nullptr);
-        p = world.get<TestComponent2>(y);
+        p = y.get<TestComponent2>();
         CHECK(p != nullptr);
-        p = world.get<TestComponent2>(x, true);
+        p = x.get<TestComponent2>(true);
         CHECK(p != nullptr);
         CHECK(p->y == 5);
-        auto p2 = world.get<TestComponent3>(x, true);
+        auto p2 = x.get<TestComponent3>(true);
         CHECK(p2 != nullptr);
         CHECK(p2->w == 11);
 
-        auto p3 = world.get<TestComponent>(z, true);
+        auto p3 = z.get<TestComponent>(true);
         CHECK(p3 == nullptr);
     }
 
@@ -272,23 +260,23 @@ TEST_SUITE("World")
         ecs::World world;
         auto prefab = world.newEntity();
         auto prefabBoss = world.newEntity();
-        world.set<BloatBoss>(prefabBoss, {.b = 2});
-        world.set<Bloat>(prefab, {.a = 11});
-        world.set<BloatWith>(prefab, {{.entity = prefabBoss}});
-        world.add<ecs::Prefab>(prefab);
+        prefabBoss.set<BloatBoss>( {.b = 2});
+        prefab.set<Bloat>( {.a = 11});
+        prefab.set<BloatWith>( {{.entity = prefabBoss.id}});
+        prefab.add<ecs::Prefab>();
 
         SUBCASE("Instantiate") {
-            auto i = world.instantiate(prefab);
-            CHECK(world.has<Bloat>(i));
-            CHECK(world.has<BloatWith>(i));
-            CHECK(world.get<Bloat>(i)->a == 11);
-            CHECK(world.get<BloatWith>(i)->entity == prefabBoss);
+            auto i = world.instantiate(prefab.id);
+            CHECK(i.has<Bloat>());
+            CHECK(i.has<BloatWith>());
+            CHECK(i.get<Bloat>()->a == 11);
+            CHECK(i.get<BloatWith>()->entity == prefabBoss.id);
 
-            auto j = world.instantiate(prefab);
-            CHECK(world.has<Bloat>(j));
-            CHECK(world.has<BloatWith>(j));
-            CHECK(world.get<Bloat>(j)->a == 11);
-            CHECK(world.get<BloatWith>(j)->entity == prefabBoss);
+            auto j = world.instantiate(prefab.id);
+            CHECK(j.has<Bloat>());
+            CHECK(j.has<BloatWith>());
+            CHECK(j.get<Bloat>()->a == 11);
+            CHECK(j.get<BloatWith>()->entity == prefabBoss.id);
         }
         SUBCASE("Prefabs not in Query 1") {
             auto q = world.createQuery<Bloat>().id;
@@ -297,13 +285,13 @@ TEST_SUITE("World")
         }
         SUBCASE("Prefabs not in Query 2") {
             auto q = world.createQuery<Bloat>().id;
-            world.instantiate(prefab);
+            world.instantiate(prefab.id);
             auto r = world.getResults(q);
             CHECK(r.count() == 1);
         }
         SUBCASE("Prefabs can be in query") {
             auto q = world.createQuery<Bloat>().withPrefabs().id;
-            world.instantiate(prefab);
+            world.instantiate(prefab.id);
             auto r = world.getResults(q);
             CHECK(r.count() == 2);
         }
@@ -315,61 +303,61 @@ TEST_SUITE("World")
 
         auto e = w.newEntity();
         SUBCASE("Add") {
-            w.addDeferred<TestComponent>(e);
-            CHECK(!w.has<TestComponent>(e));
+            e.addDeferred<TestComponent>();
+            CHECK(!e.has<TestComponent>());
 
             w.executeDeferred();
-            CHECK(w.has<TestComponent>(e));
+            CHECK(e.has<TestComponent>());
         }
 
         SUBCASE("Remove") {
-            w.add<TestComponent>(e);
-            CHECK(w.has<TestComponent>(e));
-            w.removeDeferred<TestComponent>(e);
-            CHECK(w.has<TestComponent>(e));
+            e.add<TestComponent>();
+            CHECK(e.has<TestComponent>());
+            e.removeDeferred<TestComponent>();
+            CHECK(e.has<TestComponent>());
 
             w.executeDeferred();
-            CHECK(!w.has<TestComponent>(e));
+            CHECK(!e.has<TestComponent>());
         }
 
         SUBCASE("Destroy") {
-            w.destroyDeferred(e);
-            CHECK(w.isAlive(e));
+            e.destroyDeferred();
+            CHECK(e.isAlive());
 
             w.executeDeferred();
-            CHECK(!w.isAlive(e));
+            CHECK(!e.isAlive());
         }
 
         SUBCASE("Set") {
             {
                 auto f = [&e, &w]()
                 {
-                    w.setDeferred<TestComponent2>(e, {.y = 5, .z = "Hello"});
+                    e.setDeferred<TestComponent2>( {.y = 5, .z = "Hello"});
                 };
 
                 f();
             }
-            CHECK(!w.has<TestComponent2>(e));
+            CHECK(!e.has<TestComponent2>());
             w.executeDeferred();
-            CHECK(w.has<TestComponent2>(e));
-            CHECK(w.get<TestComponent2>(e)->y == 5);
-            CHECK(w.get<TestComponent2>(e)->z == "Hello");
+            CHECK(e.has<TestComponent2>());
+            CHECK(e.get<TestComponent2>()->y == 5);
+            CHECK(e.get<TestComponent2>()->z == "Hello");
         }
 
         SUBCASE("Set 2") {
             {
                 auto f = [&e, &w]()
                 {
-                    w.setDeferred<TestComponent>(e, {.x=5});
+                    e.setDeferred<TestComponent>( {.x=5});
                 };
 
                 f();
             }
-            CHECK(!w.has<TestComponent>(e));
+            CHECK(!e.has<TestComponent>());
             w.executeDeferred();
-            CHECK(w.has<TestComponent>(e));
-            CHECK(w.get<TestComponent>(e)->x == 5);
-            w.destroy(e);
+            CHECK(e.has<TestComponent>());
+            CHECK(e.get<TestComponent>()->x == 5);
+            e.destroy();
         }
     }
 
@@ -377,33 +365,29 @@ TEST_SUITE("World")
     {
         ecs::World w;
 
-        SUBCASE("Create with char *")
-        {
+        SUBCASE("Create with char *") {
             auto e = w.newEntity("Name1");
             auto j = w.lookup("Name1");
 
-            CHECK(e == j);
+            CHECK(e.id == j);
         }
 
-        SUBCASE("Lookup with string")
-        {
+        SUBCASE("Lookup with string") {
             std::string x = "A String";
 
             auto e = w.newEntity("A String");
             auto j = w.lookup(x);
 
-            CHECK(e == j);
+            CHECK(e.id == j);
         }
 
-        SUBCASE("Set via update ")
-        {
-            auto e = w.newEntity();
-            w.set<ecs::Name>(e, { "A Name" });
+        SUBCASE("Set via update ") {
+            auto e = w.newEntity().set<ecs::Name>({"A Name"});
             auto j = w.lookup("A Name");
 
-            CHECK(e == j);
+            CHECK(e.id == j);
 
-            w.remove<ecs::Name>(e);
+            e.remove<ecs::Name>();
             j = w.lookup("A Name");
             CHECK(!w.isAlive(j));
         }

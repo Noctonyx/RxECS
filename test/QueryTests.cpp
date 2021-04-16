@@ -1,10 +1,8 @@
 #include <random>
 
 #include "doctest.h"
-#include "World.h"
-#include "QueryResult.h"
+#include "RxECS.h"
 #include "TestComponents.h"
-#include "QueryImpl.h"
 
 TEST_SUITE("Queries")
 {
@@ -16,12 +14,11 @@ TEST_SUITE("Queries")
 
         std::vector<ecs::entity_t> e;
         for (uint32_t i = 0; i < c; i++) {
-            auto x = w.newEntity();
-            w.set<TestComponent>(x, {i});
-            e.push_back(x);
+            auto x = w.newEntity().set<TestComponent>({i});
+            e.push_back(x.id);
         }
 
-       // CHECK(TestComponent::c == c);
+        // CHECK(TestComponent::c == c);
 
         auto rng = std::default_random_engine{};
         std::shuffle(std::begin(e), std::end(e), rng);
@@ -68,9 +65,8 @@ TEST_SUITE("Queries")
 
         std::vector<ecs::entity_t> e;
         for (uint32_t i = 0; i < c; i++) {
-            auto x = w.newEntity();
-            w.set<TestComponent>(x, {i});
-            e.push_back(x);
+            auto x = w.newEntity().set<TestComponent>({i});
+            e.push_back(x.id);
         }
 
         //CHECK(TestComponent::c == c);
@@ -101,9 +97,8 @@ TEST_SUITE("Queries")
 
         std::vector<ecs::entity_t> e;
         for (uint32_t i = 0; i < c; i++) {
-            auto x = w.newEntity();
-            w.set<TestComponent>(x, {i});
-            e.push_back(x);
+            auto x = w.newEntity().set<TestComponent>({i});
+            e.push_back(x.id);
         }
 
         //CHECK(TestComponent::c == c);
@@ -134,9 +129,8 @@ TEST_SUITE("Queries")
 
         std::vector<ecs::entity_t> e;
         for (uint32_t i = 0; i < c; i++) {
-            auto x = w.newEntity();
-            w.set<TestComponent>(x, {i});
-            e.push_back(x);
+            auto x = w.newEntity().set<TestComponent>({i});
+            e.push_back(x.id);
         }
 
         //CHECK(TestComponent::c == c);
@@ -169,15 +163,14 @@ TEST_SUITE("Queries")
 
         //const auto c = 6;
 
-        auto x = w.newEntity();
-        w.set<TestComponent>(x, {2});
+        auto x = w.newEntity().set<TestComponent>({2});
 
         auto q1 = w.createQuery<TestComponent>().id;
         {
             auto r = w.getResults(q1);
             for (auto & chunk: r) {
                 for (auto row: chunk) {
-                    CHECK(chunk.entity(row) == x);
+                    CHECK(chunk.entity(row) == x.id);
                     auto c1 = chunk.get<TestComponent>(row);
                     CHECK(c1->x == 2);
                 }
@@ -192,15 +185,14 @@ TEST_SUITE("Queries")
 
         //const auto c = 6;
 
-        auto x = w.newEntity();
-        w.set<TestComponent>(x, {2});
+        auto x = w.newEntity().set<TestComponent>({2});
 
         auto q1 = w.createQuery<TestComponent>().id;
         {
             auto r = w.getResults(q1);
             for (auto & chunk: r) {
                 for (auto row: chunk) {
-                    CHECK(chunk.entity(row) == x);
+                    CHECK(chunk.entity(row) == x.id);
                     auto c1 = chunk.getUpdate<TestComponent>(row);
                     CHECK(c1->x == 2);
                     c1->x = 3;
@@ -211,7 +203,7 @@ TEST_SUITE("Queries")
             auto r = w.getResults(q1);
             for (auto & chunk: r) {
                 for (auto row: chunk) {
-                    CHECK(chunk.entity(row) == x);
+                    CHECK(chunk.entity(row) == x.id);
                     auto c1 = chunk.get<TestComponent>(row);
                     CHECK(c1->x == 3);
                 }
@@ -226,8 +218,7 @@ TEST_SUITE("Queries")
 
         //const auto c = 6;
 
-        auto x = w.newEntity();
-        w.set<TestComponent>(x, {2});
+        auto x = w.newEntity().set<TestComponent>({2});
 
         auto q1 = w.createQuery<TestComponent>().id;
         {
@@ -250,8 +241,7 @@ TEST_SUITE("Queries")
 
         //const auto c = 6;
 
-        auto x = world.newEntity();
-        world.set<TestComponent>(x, {2});
+        auto x = world.newEntity().set<TestComponent>({2});
 
         auto q1 = world.createQuery<TestComponent>().id;
         {
@@ -273,9 +263,8 @@ TEST_SUITE("Queries")
 
         std::vector<ecs::entity_t> e;
         for (uint32_t i = 0; i < c; i++) {
-            auto x = world.newEntity();
-            world.set<TestComponent>(x, {i});
-            e.push_back(x);
+            auto x = world.newEntity().set<TestComponent>({i});
+            e.push_back(x.id);
         }
 
         auto q1 = world.createQuery<TestComponent>().id;
@@ -297,13 +286,9 @@ TEST_SUITE("Queries")
 
         //const auto c = 6;
 
-        auto x = world.newEntity();
-        world.set<TestComponent>(x, {2});
+        auto x = world.newEntity().set<TestComponent>({2});
 
-        auto y = world.newEntity();
-        //world.set<TestRelation>(x, { y });
-        world.set<TestComponent>(y, {3});
-        world.set<TestComponent2>(y, {7, ""});
+        auto y = world.newEntity().set<TestComponent>({3}).set<TestComponent2>({7, ""});
 
         int c1 = 0;
         int c2 = 0;
@@ -355,12 +340,11 @@ TEST_SUITE("Queries")
 
         //const auto c = 6;
 
-        auto x = world.newEntity();
-        world.set<TestComponent>(x, {2});
+        auto x = world.newEntity().set<TestComponent>({2});
 
         auto y = world.newEntity();
-        world.set<TestRelation>(x, {{y}});
-        world.set<TestComponent2>(y, {7, ""});
+        x.set<TestRelation>({{y.id}});
+        y.set<TestComponent2>({7, ""});
 
         auto q1 = world.createQuery<TestComponent>()
                        .withRelation<TestRelation, TestComponent2>().id;
@@ -409,14 +393,11 @@ TEST_SUITE("Queries")
 
         //const auto c = 6;
 
-        auto x = world.newEntity();
-        world.set<TestComponent>(x, {2});
 
-        auto y = world.newEntity();
-        world.set<TestRelation>(x, {{y}});
-        world.set<TestComponent2>(y, {7, ""});
+        auto y = world.newEntity().set<TestComponent2>({7, ""});
+        auto x = world.newEntity().set<TestComponent>({2}).set<TestRelation>({{y.id}});
 
-        world.destroy(y);
+        y.destroy();
 
         auto q1 = world.createQuery<TestComponent>()
                        .withRelation<TestRelation, TestComponent2>().id;
@@ -445,8 +426,7 @@ TEST_SUITE("Queries")
 
         //const auto c = 6;
 
-        auto x = world.newEntity();
-        world.set<TestComponent>(x, {2});
+        auto x = world.newEntity() .set<TestComponent>( {2});
         world.setSingleton<TestComponent2>({7, ""});
 
         auto q1 = world
@@ -499,12 +479,12 @@ TEST_SUITE("Queries")
         auto y = world.newEntity();
         auto z = world.newEntity();
 
-        world.set<TestComponent>(x, {1});
-        world.set<TestComponent2>(y, {.y = 5});
-        world.set<TestComponent3>(z, {.w = 11});
+        x.set<TestComponent>({1});
+        y.set<TestComponent2>({.y = 5});
+        z.set<TestComponent3>({.w = 11});
 
-        world.set<ecs::InstanceOf>(x, {{y}});
-        world.set<ecs::InstanceOf>(y, {{z}});
+        x.set<ecs::InstanceOf>({y.id});
+        y.set<ecs::InstanceOf>({z.id});
 
         auto q1 = world
                   .createQuery<TestComponent>()

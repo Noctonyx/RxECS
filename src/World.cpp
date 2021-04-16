@@ -8,6 +8,8 @@
 #include "System.h"
 #include "QueryImpl.h"
 #include "Stream.h"
+#include "EntityBuilder.h"
+#include "EntityImpl.h"
 
 namespace ecs
 {
@@ -21,7 +23,7 @@ namespace ecs
         ensureTableForArchetype(am.emptyArchetype);
         tables[0]->addEntity(0);
 
-        componentBootstrapId = newEntity();
+        componentBootstrapId = newEntity().id;
         auto v = std::type_index(typeid(Component));
         componentMap.emplace(v, componentBootstrapId);
         componentBootstrap = {
@@ -52,7 +54,7 @@ namespace ecs
         tables.clear();
     }
 
-    entity_t World::newEntity(const char * name)
+    EntityBuilder World::newEntity(const char * name)
     {
         while (recycleStart < entities.size()) {
             if (entities[recycleStart].alive == false) {
@@ -61,7 +63,7 @@ namespace ecs
                 auto id = makeId(static_cast<uint32_t>(recycleStart),
                                  entities[recycleStart].version);
                 tables[am.emptyArchetype]->addEntity(id);
-                return id;
+                return EntityBuilder{id, this};
             }
             recycleStart++;
         }
@@ -80,10 +82,10 @@ namespace ecs
             nameIndex[name] = id;
             set<Name>(id, {name});
         }
-        return id;
+        return EntityBuilder{id, this};
     }
 
-    entity_t World::instantiate(entity_t prefab)
+    EntityBuilder World::instantiate(entity_t prefab)
     {
         const auto prefabAt = getEntityArchetype(prefab);
         auto trans = am.removeComponentFromArchetype(prefabAt, getComponentId<Prefab>());
@@ -91,8 +93,8 @@ namespace ecs
         auto e = newEntity();
 
         ensureTableForArchetype(trans.to_at);
-        Table::copyEntity(this, tables[prefabAt], tables[trans.to_at], prefab, e, trans);
-        entities[index(e)].archetype = trans.to_at;
+        Table::copyEntity(this, tables[prefabAt], tables[trans.to_at], prefab, e.id, trans);
+        entities[index(e.id)].archetype = trans.to_at;
         return e;
     }
 
@@ -277,9 +279,9 @@ namespace ecs
     {
         auto s = new Stream(id, this);
         auto e = newEntity();
-        set<StreamComponent>(e, {s});
+        e.set<StreamComponent>({s});
 
-        return e;
+        return e.id;
     }
 
     void World::deleteStream(streamid_t id)
@@ -311,19 +313,19 @@ namespace ecs
     QueryBuilder World::createQuery(const std::set<component_id_t> & with)
     {
         auto q = newEntity();
-        set<Query>(q, Query{.with = with, .without = {getComponentId<Prefab>()}});
+        q.set<Query>(Query{.with = with, .without = {getComponentId<Prefab>()}});
 
-        auto aq = getUpdate<Query>(q);
+        auto aq = q.getUpdate<Query>();
         aq->recalculateQuery(this);
-        return QueryBuilder{q, this};
+        return QueryBuilder{q.id, this};
     }
 
     SystemBuilder World::createSystem()
     {
         auto s = newEntity();
-        set<System>(s, std::move(System{.query = 0, .world = this}));
+        s.set<System>(System{.query = 0, .world = this});
 
-        return SystemBuilder{s, 0, 0, this};
+        return SystemBuilder{s.id, 0, 0, this};
     }
 
     void World::deleteQuery(queryid_t q)
