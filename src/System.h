@@ -7,6 +7,18 @@ namespace ecs
 {
     class World;
 
+    struct Pipeline
+    {
+        struct StartInit{};
+        struct EndInit{};
+
+        struct StartMain {};
+        struct EndMain {};
+
+        struct StartFinal {};
+        struct EndFinal {};
+    };
+
     struct SystemSet
     {
         bool enabled = true;

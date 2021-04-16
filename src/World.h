@@ -9,7 +9,7 @@
 #include "ArchetypeManager.h"
 #include "Component.h"
 #include "Entity.h"
-#include "EntityBuilder.h"
+#include "EntityHandle.h"
 #include "QueryBuilder.h"
 #include "Table.h"
 #include "SystemBuilder.h"
@@ -83,12 +83,12 @@ namespace ecs
         World();
         ~World();
 
-        EntityBuilder newEntity(const char * name = nullptr );
+        EntityHandle newEntity(const char * name = nullptr );
         //entity_t newEntity();
-        EntityBuilder instantiate(entity_t prefab);
+        EntityHandle instantiate(entity_t prefab);
 
-        EntityBuilder lookup(const char* name);
-        EntityBuilder lookup(const std::string & name);
+        EntityHandle lookup(const char* name);
+        EntityHandle lookup(const std::string & name);
 
         [[nodiscard]] bool isAlive(entity_t id) const;
         void destroy(entity_t id);

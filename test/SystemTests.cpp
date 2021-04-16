@@ -17,7 +17,7 @@ TEST_SUITE("Systems")
         auto system = world.createSystem().withQuery<TestComponent>()
                            .without<TestComponent2>()
                            .each<TestComponent>(
-                               [&zz](ecs::EntityBuilder, const TestComponent * xy)
+                               [&zz](ecs::EntityHandle, const TestComponent * xy)
                                {
                                    zz = xy->x;
                                });
@@ -46,21 +46,21 @@ TEST_SUITE("Systems")
              .label<Label1>()
              .label<Label3>()
              .after<Label2>()
-             .each<TestComponent>([&c](ecs::EntityBuilder, TestComponent *)
+             .each<TestComponent>([&c](ecs::EntityHandle, TestComponent *)
              {
                  c++;
                  CHECK(c == 3);
              });
         world.createSystem().withQuery<TestComponent>()
              .label<Label2>()
-             .each<TestComponent>([&c](ecs::EntityBuilder, TestComponent *)
+             .each<TestComponent>([&c](ecs::EntityHandle, TestComponent *)
              {
                  c++;
                  CHECK(c == 1);
              });
         world.createSystem().withQuery<TestComponent>()
              .label<Label3>()
-             .each<TestComponent>([&c](ecs::EntityBuilder, TestComponent *)
+             .each<TestComponent>([&c](ecs::EntityHandle, TestComponent *)
              {
                  c++;
                  CHECK(c == 4);
@@ -68,7 +68,7 @@ TEST_SUITE("Systems")
         world.createSystem().withQuery<TestComponent>()
              .before<Label3>()
              .before<Label1>()
-             .each<TestComponent>([&c](ecs::EntityBuilder, TestComponent *)
+             .each<TestComponent>([&c](ecs::EntityHandle, TestComponent *)
              {
                  c++;
                  CHECK(c == 2);
@@ -91,7 +91,7 @@ TEST_SUITE("Systems")
                            .without<TestComponent2>()
                            .withSet(sete.id)
                            .each<TestComponent>(
-                               [&zz](ecs::EntityBuilder, const TestComponent * xy)
+                               [&zz](ecs::EntityHandle, const TestComponent * xy)
                                {
                                    zz = xy->x;
                                });
@@ -118,7 +118,7 @@ TEST_SUITE("Systems")
         auto system = world.createSystem().withQuery<TestComponent>()
                            .without<TestComponent2>()
                            .each<TestComponent>(
-                               [&zz](ecs::EntityBuilder, const TestComponent * xy)
+                               [&zz](ecs::EntityHandle, const TestComponent * xy)
                                {
                                    zz = xy->x;
                                });

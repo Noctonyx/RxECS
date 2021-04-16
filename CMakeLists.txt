@@ -24,6 +24,7 @@ add_library(RxECS STATIC
     src/SystemBuilder.cpp
     src/Stream.h
     src/Stream.cpp
+    src/EntityHandle.h
     )
 
  add_executable(RxECS_tests 

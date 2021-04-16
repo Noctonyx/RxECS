@@ -8,27 +8,27 @@ namespace ecs
     class World;
     //class World;
 
-    struct EntityBuilder
+    struct EntityHandle
     {
         entity_t id;
         World* world;
 
         template<typename T>
-        EntityBuilder & set(const T & v);
+        EntityHandle & set(const T & v);
 
         template<typename T>
-        EntityBuilder& add();
+        EntityHandle& add();
 
         template<typename T>
-        EntityBuilder& addDeferred();
+        EntityHandle& addDeferred();
 
         template<typename T>
-        EntityBuilder& removeDeferred();
+        EntityHandle& removeDeferred();
 
-        EntityBuilder& destroyDeferred();
+        EntityHandle& destroyDeferred();
 
         template <typename T>
-        EntityBuilder& setDeferred( T&& value);
+        EntityHandle& setDeferred( T&& value);
 
         template<typename T>
         bool has();
@@ -40,12 +40,17 @@ namespace ecs
         const T* get(bool inherit = false);
 
         template<typename T>
-        EntityBuilder& remove();
+        EntityHandle& remove();
 
         bool isAlive() const;
-        EntityBuilder& destroy();
+        EntityHandle& destroy();
 
-        bool operator==(const EntityBuilder & o) const
+        EntityHandle getHandle(entity_t o)
+        {
+            return EntityHandle{ o, world };
+        }
+
+        bool operator==(const EntityHandle & o) const
         {
             return o.id == id && o.world == world;
         }

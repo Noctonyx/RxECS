@@ -8,7 +8,7 @@
 #include "System.h"
 #include "QueryImpl.h"
 #include "Stream.h"
-#include "EntityBuilder.h"
+#include "EntityHandle.h"
 #include "EntityImpl.h"
 
 namespace ecs
@@ -54,7 +54,7 @@ namespace ecs
         tables.clear();
     }
 
-    EntityBuilder World::newEntity(const char * name)
+    EntityHandle World::newEntity(const char * name)
     {
         while (recycleStart < entities.size()) {
             if (entities[recycleStart].alive == false) {
@@ -63,7 +63,7 @@ namespace ecs
                 auto id = makeId(static_cast<uint32_t>(recycleStart),
                                  entities[recycleStart].version);
                 tables[am.emptyArchetype]->addEntity(id);
-                return EntityBuilder{id, this};
+                return EntityHandle{id, this};
             }
             recycleStart++;
         }
@@ -82,10 +82,10 @@ namespace ecs
             nameIndex[name] = id;
             set<Name>(id, {name});
         }
-        return EntityBuilder{id, this};
+        return EntityHandle{id, this};
     }
 
-    EntityBuilder World::instantiate(entity_t prefab)
+    EntityHandle World::instantiate(entity_t prefab)
     {
         const auto prefabAt = getEntityArchetype(prefab);
         auto trans = am.removeComponentFromArchetype(prefabAt, getComponentId<Prefab>());
@@ -98,7 +98,7 @@ namespace ecs
         return e;
     }
 
-    EntityBuilder World::lookup(const char * name)
+    EntityHandle World::lookup(const char * name)
     {
         if (nameIndex.contains(name)) {
             return {nameIndex[name], this};
@@ -107,7 +107,7 @@ namespace ecs
         return {0, this};
     }
 
-    EntityBuilder World::lookup(const std::string & name)
+    EntityHandle World::lookup(const std::string & name)
     {
         return lookup(name.c_str());
     }
@@ -385,7 +385,7 @@ namespace ecs
                 }
             }
         }
-        getResults(streamQuery).each<StreamComponent>([](EntityBuilder, StreamComponent * s)
+        getResults(streamQuery).each<StreamComponent>([](EntityHandle, StreamComponent * s)
         {
             s->ptr->clear();
         });
@@ -442,7 +442,7 @@ namespace ecs
         /* This will only be 0 during world bootstrap, ie when we are adding queryquery */
         if (queryQuery) {
             getResults(queryQuery)
-                .each<Query>([&table, &ad](EntityBuilder, Query * aq)
+                .each<Query>([&table, &ad](EntityHandle, Query * aq)
                     {
                         assert(aq);
                         if (aq->interestedInArchetype(ad)) {
@@ -484,7 +484,7 @@ namespace ecs
         std::unordered_map<entity_t, std::set<entity_t>> ready;
 
         getResults(systemQuery).each<System, SystemSet>(
-            [&](EntityBuilder e, System * s, const SystemSet * set)
+            [&](EntityHandle e, System * s, const SystemSet * set)
             {
                 if ((set && !set->enabled) || !s->enabled) {
                     return;

@@ -230,7 +230,7 @@ TEST_SUITE("Queries")
         {
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent>(
-                [](ecs::EntityBuilder e, const TestComponent * c)
+                [](ecs::EntityHandle e, const TestComponent * c)
                 {
                     CHECK(c->x == 2);
                     CHECK(e.has<TestComponent>());
@@ -254,7 +254,7 @@ TEST_SUITE("Queries")
         {
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent>(
-                [](ecs::EntityBuilder, const TestComponent * c1)
+                [](ecs::EntityHandle, const TestComponent * c1)
                 {
                     auto j = c1->x;
                     (void) j;
@@ -279,7 +279,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [&c1, &c2](
-                ecs::EntityBuilder,
+                ecs::EntityHandle,
                 const TestComponent *,
                 const TestComponent2 * p)
                 {
@@ -297,7 +297,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [&c1, &c2](
-                ecs::EntityBuilder,
+                ecs::EntityHandle,
                 const TestComponent *,
                 TestComponent2 * p)
                 {
@@ -329,7 +329,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2, TestRelation>(
                 [](
-                ecs::EntityBuilder e,
+                ecs::EntityHandle e,
                 const TestComponent * c,
                 const TestComponent2 * p,
                 const TestRelation * r)
@@ -346,7 +346,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2, TestRelation>(
                 [](
-                ecs::EntityBuilder e,
+                ecs::EntityHandle e,
                 const TestComponent * c,
                 TestComponent2 * p,
                 TestRelation * r)
@@ -377,7 +377,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2, TestRelation>(
                 [](
-                ecs::EntityBuilder e,
+                ecs::EntityHandle e,
                 const TestComponent * c,
                 const TestComponent2 * p,
                 const TestRelation *)
@@ -405,7 +405,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [](
-                ecs::EntityBuilder e,
+                ecs::EntityHandle e,
                 const TestComponent * c,
                 TestComponent2 * p)
                 {
@@ -423,7 +423,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [](
-                ecs::EntityBuilder e,
+                ecs::EntityHandle e,
                 const TestComponent * c,
                 const TestComponent2 * p)
                 {
@@ -458,7 +458,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [](
-                ecs::EntityBuilder e,
+                ecs::EntityHandle e,
                 TestComponent * c,
                 const TestComponent2 * p)
                 {
@@ -476,7 +476,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [](
-                ecs::EntityBuilder e,
+                ecs::EntityHandle e,
                 TestComponent * c,
                 TestComponent2 * p)
                 {
@@ -494,7 +494,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent, TestComponent2>(
                 [](
-                ecs::EntityBuilder e,
+                ecs::EntityHandle e,
                 TestComponent * c,
                 const TestComponent2 * p)
                 {
@@ -512,7 +512,7 @@ TEST_SUITE("Queries")
             auto query_result = world.getResults(q1);
             query_result.each<TestComponent3, TestComponent2>(
                 [](
-                ecs::EntityBuilder e,
+                ecs::EntityHandle e,
                 TestComponent3 * c,
                 const TestComponent2 * p)
                 {
