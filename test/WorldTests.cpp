@@ -4,6 +4,7 @@
 #include "World.h"
 #include "QueryResult.h"
 #include "TestComponents.h"
+#include "QueryImpl.h"
 
 //int TestComponent::c = 0;
 
@@ -28,7 +29,7 @@ TEST_SUITE("World")
     TEST_CASE("Component Add")
     {
         {
-            ecs::World*  w = new ecs::World;
+            ecs::World * w = new ecs::World;
             auto e = w->newEntity();
             w->add<TestComponent>(e);
             CHECK(w->has<TestComponent>(e));
@@ -220,6 +221,60 @@ TEST_SUITE("World")
 
         auto p3 = world.get<TestComponent>(z, true);
         CHECK(p3 == nullptr);
+    }
+
+    TEST_CASE("Prefabs")
+    {
+        struct BloatBoss
+        {
+            uint32_t b;
+        };
+
+        struct Bloat
+        {
+            uint32_t a;
+        };
+
+        struct BloatWith : ecs::Relation { };
+
+        ecs::World world;
+        auto prefab = world.newEntity();
+        auto prefabBoss = world.newEntity();
+        world.set<BloatBoss>(prefabBoss, {.b = 2});
+        world.set<Bloat>(prefab, {.a = 11});
+        world.set<BloatWith>(prefab, {{.entity = prefabBoss}});
+        world.add<ecs::Prefab>(prefab);
+
+        SUBCASE("Instantiate") {
+            auto i = world.instantiate(prefab);
+            CHECK(world.has<Bloat>(i));
+            CHECK(world.has<BloatWith>(i));
+            CHECK(world.get<Bloat>(i)->a == 11);
+            CHECK(world.get<BloatWith>(i)->entity == prefabBoss);
+
+            auto j = world.instantiate(prefab);
+            CHECK(world.has<Bloat>(j));
+            CHECK(world.has<BloatWith>(j));
+            CHECK(world.get<Bloat>(j)->a == 11);
+            CHECK(world.get<BloatWith>(j)->entity == prefabBoss);
+        }
+        SUBCASE("Prefabs not in Query 1") {
+            auto q = world.createQuery<Bloat>().id;
+
+            CHECK(world.getResults(q).count() == 0);
+        }
+        SUBCASE("Prefabs not in Query 2") {
+            auto q = world.createQuery<Bloat>().id;
+            world.instantiate(prefab);
+            auto r = world.getResults(q);
+            CHECK(r.count() == 1);
+        }
+        SUBCASE("Prefabs can be in query") {
+            auto q = world.createQuery<Bloat>().withPrefabs().id;
+            world.instantiate(prefab);
+            auto r = world.getResults(q);
+            CHECK(r.count() == 2);
+        }
     }
 
     TEST_CASE("Deferred Commands")

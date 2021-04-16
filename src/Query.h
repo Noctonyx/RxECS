@@ -11,9 +11,9 @@ namespace ecs
     {
         std::set<component_id_t> with;
         std::set<component_id_t> without;
-        std::set<component_id_t> optional {};
-        std::set<component_id_t> singleton {};
-        std::set<std::pair<component_id_t, std::set<component_id_t>>> relations {};
+        std::set<component_id_t> optional{};
+        std::set<component_id_t> singleton{};
+        std::set<std::pair<component_id_t, std::set<component_id_t>>> relations{};
 
         bool inheritamce = false;
 

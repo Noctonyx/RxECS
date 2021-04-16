@@ -32,6 +32,7 @@ namespace ecs
         ~Column();
         void enlargeMemory();
         size_t addMoveEntry(void* srcPtr);
+        size_t addCopyEntry(void* srcPtr);
         size_t addEntry();
         void removeEntry(uint32_t row, bool destroy);
         void* getEntry(uint32_t row) const;

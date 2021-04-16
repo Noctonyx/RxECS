@@ -78,6 +78,19 @@ namespace ecs
         return id;
     }
 
+    entity_t World::instantiate(entity_t prefab)
+    {
+        const auto prefabAt = getEntityArchetype(prefab);
+        auto trans = am.removeComponentFromArchetype(prefabAt, getComponentId<Prefab>());
+
+        auto e = newEntity();
+
+        ensureTableForArchetype(trans.to_at);
+        Table::copyEntity(this, tables[prefabAt], tables[trans.to_at], prefab, e, trans);
+        entities[index(e)].archetype = trans.to_at;
+        return e;
+    }
+
     bool World::isAlive(const entity_t id) const
     {
         const auto v = version(id);
@@ -269,7 +282,7 @@ namespace ecs
     QueryBuilder World::createQuery(const std::set<component_id_t> & with)
     {
         auto q = newEntity();
-        set<Query>(q, Query{.with = with});
+        set<Query>(q, Query{.with = with, .without = {getComponentId<Prefab>()}});
 
         auto aq = getUpdate<Query>(q);
         aq->recalculateQuery(this);

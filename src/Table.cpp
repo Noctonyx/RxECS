@@ -141,4 +141,29 @@ namespace ecs
         }
         fromTable->entities.pop_back();
     }
+
+    void Table::copyEntity(World * world,
+        Table * fromTable,
+        Table * toTable,
+        entity_t id,
+        entity_t newEntity,
+        const ArchetypeTransition & trans)
+    {
+        const auto source_row = fromTable->getEntityRow(id);
+
+        auto new_index = static_cast<uint32_t>(toTable->entities.size());
+        toTable->invalidateQueryResults();
+
+        world->entities[index(newEntity)].row = new_index;
+        toTable->entities.push_back(newEntity);
+
+        for (auto& a : trans.addComponents) {
+            toTable->columns[a]->addEntry();
+        }
+
+        for (auto& e : trans.preserveComponents) {
+            const auto ptr1 = fromTable->columns[e]->getEntry(source_row);
+            toTable->columns[e]->addCopyEntry(ptr1);
+        }
+    }
 }

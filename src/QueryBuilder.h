@@ -16,6 +16,8 @@ namespace ecs
         template <class T, class ... U>
         QueryBuilder & withRelation();
 
+        QueryBuilder& withPrefabs();
+
         template <class ... TArgs>
         QueryBuilder& withOptional();
 

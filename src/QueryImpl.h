@@ -61,6 +61,14 @@ namespace ecs
         return *this;
     }
 
+    inline QueryBuilder & QueryBuilder::withPrefabs()
+    {       
+        auto qp = world->getUpdate<Query>(id);
+        qp->without.erase(world->getComponentId<Prefab>());
+        qp->recalculateQuery(world);
+        return *this;
+    }
+
     inline QueryBuilder & QueryBuilder::withInheritance(bool inherit)
     {
         auto qp = world->getUpdate<Query>(id);

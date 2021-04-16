@@ -33,6 +33,8 @@ namespace ecs
         uint32_t row;
     };
 
+    struct Prefab {};
+
     struct WorldIterator
     {
         World* world;
@@ -81,6 +83,8 @@ namespace ecs
         ~World();
 
         entity_t newEntity();
+        entity_t instantiate(entity_t prefab);
+
         [[nodiscard]] bool isAlive(entity_t id) const;
         void destroy(entity_t id);
         void destroyDeferred(entity_t id);

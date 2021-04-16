@@ -53,6 +53,19 @@ namespace ecs
         return count++;
     }
 
+    size_t Column::addCopyEntry(void* srcPtr)
+    {
+        assert(count <= allocated);
+
+        if (count == allocated) {
+            enlargeMemory();
+        }
+
+        void* dest_ptr = ptr + count * componentSize;
+        componentCopier(srcPtr, dest_ptr, componentSize, 1);
+        return count++;
+    }
+
     size_t Column::addEntry()
     {
         assert(count <= allocated);
