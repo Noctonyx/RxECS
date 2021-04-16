@@ -94,7 +94,6 @@ namespace ecs
     struct Name
     {
         std::string name;
-        //const char* name;
     };
 
     struct Relation

@@ -52,7 +52,7 @@ namespace ecs
         tables.clear();
     }
 
-    entity_t World::newEntity()
+    entity_t World::newEntity(const char * name)
     {
         while (recycleStart < entities.size()) {
             if (entities[recycleStart].alive == false) {
@@ -75,6 +75,11 @@ namespace ecs
         x.archetype = am.emptyArchetype;
         auto id = makeId(i, v);
         tables[am.emptyArchetype]->addEntity(id);
+
+        if (name) {
+            nameIndex[name] = id;
+            set<Name>(id, {name});
+        }
         return id;
     }
 
@@ -89,6 +94,20 @@ namespace ecs
         Table::copyEntity(this, tables[prefabAt], tables[trans.to_at], prefab, e, trans);
         entities[index(e)].archetype = trans.to_at;
         return e;
+    }
+
+    entity_t World::lookup(const char * name)
+    {
+        if (nameIndex.contains(name)) {
+            return nameIndex[name];
+        }
+
+        return 0;
+    }
+
+    entity_t World::lookup(const std::string & name)
+    {
+        return lookup(name.c_str());
     }
 
     bool World::isAlive(const entity_t id) const
@@ -156,6 +175,11 @@ namespace ecs
 
     void World::remove(entity_t id, component_id_t componentId)
     {
+        if (componentId == getComponentId<Name>()) {
+            auto np = get<Name>(id);
+            nameIndex.erase(np->name);
+        }
+
         const auto at = getEntityArchetype(id);
         const auto & newAt = am.removeComponentFromArchetype(at, componentId);
         moveEntity(id, at, newAt);
@@ -196,6 +220,11 @@ namespace ecs
 
     void World::set(entity_t id, component_id_t componentId, const void * ptr)
     {
+        if (componentId != componentBootstrapId && componentId == getComponentId<Name>()) {
+            auto np = static_cast<const Name *>(ptr);
+            nameIndex[np->name] = id;
+        }
+
         auto at = getEntityArchetype(id);
         auto & ad = am.getArchetypeDetails(at);
         if (ad.components.find(componentId) == ad.components.end()) {

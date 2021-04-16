@@ -82,8 +82,12 @@ namespace ecs
         World();
         ~World();
 
-        entity_t newEntity();
+        entity_t newEntity(const char * name = nullptr );
+        //entity_t newEntity();
         entity_t instantiate(entity_t prefab);
+
+        entity_t lookup(const char* name);
+        entity_t lookup(const std::string & name);
 
         [[nodiscard]] bool isAlive(entity_t id) const;
         void destroy(entity_t id);
@@ -212,6 +216,7 @@ namespace ecs
         std::vector<DeferredCommand> deferredCommands;
 
         std::vector<entity_t> systemOrder;
+        robin_hood::unordered_map<std::string, entity_t> nameIndex;
 
     public:
         ArchetypeManager am;

@@ -372,4 +372,40 @@ TEST_SUITE("World")
             w.destroy(e);
         }
     }
+
+    TEST_CASE("Name")
+    {
+        ecs::World w;
+
+        SUBCASE("Create with char *")
+        {
+            auto e = w.newEntity("Name1");
+            auto j = w.lookup("Name1");
+
+            CHECK(e == j);
+        }
+
+        SUBCASE("Lookup with string")
+        {
+            std::string x = "A String";
+
+            auto e = w.newEntity("A String");
+            auto j = w.lookup(x);
+
+            CHECK(e == j);
+        }
+
+        SUBCASE("Set via update ")
+        {
+            auto e = w.newEntity();
+            w.set<ecs::Name>(e, { "A Name" });
+            auto j = w.lookup("A Name");
+
+            CHECK(e == j);
+
+            w.remove<ecs::Name>(e);
+            j = w.lookup("A Name");
+            CHECK(!w.isAlive(j));
+        }
+    }
 }
