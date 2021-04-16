@@ -118,7 +118,7 @@ namespace ecs
         void * getUpdate(entity_t id, component_id_t componentId);
 
         template <typename T>
-        void set(entity_t id, T && value);
+        void set(entity_t id, const T & value);
         void set(entity_t id, component_id_t componentId, const void * ptr);
 
         template <typename T>
@@ -263,7 +263,7 @@ namespace ecs
     }
 
     template <typename T>
-    void World::set(entity_t id, T && value)
+    void World::set(entity_t id, const T & value)
     {
         set(id, getComponentId<T>(), &value);
     }

@@ -6,8 +6,6 @@
 #include "TestComponents.h"
 #include "QueryImpl.h"
 
-//int TestComponent::c = 0;
-
 TEST_SUITE("World")
 {
     TEST_CASE("Entity basics")
@@ -40,7 +38,6 @@ TEST_SUITE("World")
     TEST_CASE("Component basics")
     {
         ecs::World w;
-        //TestComponent::c = 0;
 
         auto e = w.newEntity();
         auto e2 = w.newEntity();
@@ -51,12 +48,9 @@ TEST_SUITE("World")
         w.set<TestComponent>(e, {12});
         CHECK(w.get<TestComponent>(e)->x == 12);
 
-        //w.add<TestComponent>(e2);
         w.set<TestComponent>(e2, {11});
         w.set<ecs::Name>(e2, {.name = "Fred"});
         CHECK(w.has<TestComponent>(e2));
-
-        //CHECK(TestComponent::c == 2);
 
         w.set<TestComponent2>(e, {.y=14});
         CHECK(w.has<TestComponent2>(e));
@@ -70,47 +64,93 @@ TEST_SUITE("World")
         CHECK(w.has<TestComponent>(e2));
         CHECK(w.get<TestComponent>(e2)->x == 11);
 
-        //CHECK(TestComponent::c == 1);
-
         w.destroy(e2);
         w.destroy(e);
-
-        //CHECK(TestComponent::c == 0);
     }
 
     TEST_CASE("Component lifetime")
     {
         ecs::World w;
 
-        auto e = w.newEntity();
+        struct Payload
+        {
+            uint32_t h;
+        };
 
-        //TestComponent::c = 0;
-        //CHECK(TestComponent::c == 0);
+        std::shared_ptr<Payload> ptr = std::make_shared<Payload>();
+        ptr->h = 12;
+
+        struct Carrier
+        {
+            std::shared_ptr<Payload> p;
+        };
+
+        std::weak_ptr<Payload> wp = ptr;
+
+        Carrier c{ptr};
+
+        ptr.reset();
+
+        CHECK(c.p.use_count() == 1);
+        CHECK(!wp.expired());
 
         SUBCASE("Set") {
-            w.set<TestComponent>(e, {4});
-            CHECK(w.has<TestComponent>(e));
-            //CHECK(TestComponent::c == 1);
-            w.destroy(e);
-            //CHECK(TestComponent::c == 0);
-        }
+            auto px = c.p;
+            auto e = w.newEntity();
+            w.set<Carrier>(e, c);
+            c.p.reset();
+            CHECK(!wp.expired());
 
-        SUBCASE("Set and Add") {
-            w.set<TestComponent>(e, {4});
-            CHECK(w.has<TestComponent>(e));
-            //CHECK(TestComponent::c == 1);
-            w.add<TestComponent2>(e);
-            //CHECK(TestComponent::c == 1);
-            w.destroy(e);
-            //CHECK(TestComponent::c == 0);
+            SUBCASE("And Destroy") {
+                px.reset();
+                CHECK(!wp.expired());
+                w.destroy(e);
+                CHECK(wp.expired());
+            }
+            SUBCASE("And Add") {
+                px.reset();
+                CHECK(!wp.expired());
+                w.add<TestComponent2>(e);
+                CHECK(!wp.expired());
+                w.destroy(e);
+                CHECK(wp.expired());
+            }
+            SUBCASE("And Get") {
+                px.reset();
+                auto gg = w.get<Carrier>(e);
+                CHECK(gg->p.use_count() == 1);
+                CHECK(!wp.expired());
+                auto gg2 = w.getUpdate<Carrier>(e);
+                CHECK(gg2->p.use_count() == 1);
+                CHECK(!wp.expired());
+                gg2->p.reset();
+                CHECK(wp.expired());
+                w.destroy(e);
+                CHECK(wp.expired());
+            }
         }
+        SUBCASE("Bulk") {
+            Carrier c2(nullptr);
+            auto e = w.newEntity();
+            w.set<Carrier>(e, c);
+            CHECK(c.p.use_count() == 2);
+            CHECK(!wp.expired());
 
-        SUBCASE("Add") {
-            w.add<TestComponent>(e);
-            CHECK(w.has<TestComponent>(e));
-            //CHECK(TestComponent::c == 1);
+            for (int i = 0; i < 200; i++) {
+                auto e1 = w.newEntity();
+                w.set<Carrier>(e1, c2);
+            }
+            CHECK(c.p.use_count() == 2);
+            CHECK(!wp.expired());
+            c.p.reset();
+            for (int i = 0; i < 200; i++) {
+                auto e1 = w.newEntity();
+                w.set<Carrier>(e1, c2);
+            }
+            //CHECK(c.p.use_count() == 1);
+            CHECK(!wp.expired());
             w.destroy(e);
-            //CHECK(TestComponent::c == 0);
+            CHECK(wp.expired());
         }
     }
 
@@ -129,16 +169,12 @@ TEST_SUITE("World")
         ecs::World w;
 
         const auto c = 1000;
-        //TestComponent::c = 0;
-
         std::vector<ecs::entity_t> e;
         for (uint32_t i = 0; i < c; i++) {
             auto x = w.newEntity();
             w.set<TestComponent>(x, {i});
             e.push_back(x);
         }
-
-        //CHECK(TestComponent::c == c);
 
         auto rng = std::default_random_engine{};
         std::shuffle(std::begin(e), std::end(e), rng);
@@ -153,15 +189,11 @@ TEST_SUITE("World")
             w.remove<TestComponent>(xx);
         }
 
-        //CHECK(TestComponent::c == 0);
-
         std::shuffle(std::begin(e), std::end(e), rng);
 
         for (auto & xx: e) {
             w.destroy(xx);
         }
-
-        //CHECK(TestComponent::c == 0);
     }
 
     TEST_CASE("Tag Components")
@@ -326,26 +358,18 @@ TEST_SUITE("World")
 
         SUBCASE("Set 2") {
             {
-                //TestComponent::c = 0;
-
-                //CHECK(TestComponent::c == 0);
-
                 auto f = [&e, &w]()
                 {
                     w.setDeferred<TestComponent>(e, {.x=5});
-                    //CHECK(TestComponent::c == 1);
                 };
 
                 f();
-                //CHECK(TestComponent::c == 1);
             }
             CHECK(!w.has<TestComponent>(e));
             w.executeDeferred();
             CHECK(w.has<TestComponent>(e));
             CHECK(w.get<TestComponent>(e)->x == 5);
-            //CHECK(TestComponent::c == 1);
             w.destroy(e);
-            //CHECK(TestComponent::c == 0);
         }
     }
 }
