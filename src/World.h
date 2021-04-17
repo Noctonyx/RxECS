@@ -189,6 +189,10 @@ namespace ecs
 
         void executeDeferred();
 
+        std::string description(entity_t id);
+        Archetype& getEntityArchetypeDetails(entity_t id);
+       
+
     protected:
         uint32_t getEntityArchetype(entity_t id) const;
         void moveEntity(entity_t id, uint32_t from, const ArchetypeTransition & trans);
@@ -201,7 +205,7 @@ namespace ecs
         std::vector<EntityEntry> entities{};
 
         size_t recycleStart;
-        robin_hood::unordered_map<std::type_index, component_id_t> componentMap;
+        robin_hood::unordered_map<std::type_index, component_id_t> componentMap{};
 
         Component componentBootstrap;
         component_id_t componentBootstrapId;
@@ -216,8 +220,8 @@ namespace ecs
 
         std::vector<DeferredCommand> deferredCommands;
 
-        std::vector<entity_t> systemOrder;
-        robin_hood::unordered_map<std::string, entity_t> nameIndex;
+        std::vector<entity_t> systemOrder{};
+        robin_hood::unordered_map<std::string, entity_t> nameIndex{};
 
     public:
         ArchetypeManager am;
@@ -327,6 +331,8 @@ namespace ecs
     {
         return createStream(getComponentId<T>());
     }
+
+    
 
     template <typename T>
     component_id_t World::getComponentId()

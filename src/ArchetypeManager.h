@@ -29,11 +29,14 @@ namespace robin_hood
 
 namespace ecs
 {
+    class World;
+
     struct Archetype
     {
         std::set<component_id_t> components;
         Hash hash_value;
         uint32_t id;
+        //World* world;
 
         void generateHash()
         {

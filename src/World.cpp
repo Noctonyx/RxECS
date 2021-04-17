@@ -19,6 +19,7 @@ namespace ecs
         entities[0].alive = true;
         recycleStart = 0;
         deltaTime = 0.f;
+        tables.clear();
 
         ensureTableForArchetype(am.emptyArchetype);
         tables[0]->addEntity(0);
@@ -418,6 +419,21 @@ namespace ecs
         deferredCommands.clear();
     }
 
+    std::string World::description(entity_t id)
+    {
+        const Name* n = get<Name>(id);
+        if(n) {
+            return n->name;
+        }
+        std::string nm = "Entity#" + std::to_string(index(id)) + ":" + std::to_string(version(id));
+        return nm;
+    }
+
+    Archetype & World::getEntityArchetypeDetails(entity_t id)
+    {
+        return am.getArchetypeDetails(getEntityArchetype(id));
+    }
+
     uint32_t World::getEntityArchetype(entity_t id) const
     {
         //assert(isAlive(id));
@@ -460,7 +476,7 @@ namespace ecs
         }
 
         auto t = new Table(this, aid);
-        tables.emplace(aid, t);
+        tables[aid] = t;
 
         addTableToActiveQueries(t, aid);
     }

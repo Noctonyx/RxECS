@@ -10,12 +10,15 @@ namespace ecs
     struct Pipeline
     {
         struct StartInit{};
+        struct Init{};
         struct EndInit{};
 
         struct StartMain {};
+        struct Main {};
         struct EndMain {};
 
         struct StartFinal {};
+        struct Final{};
         struct EndFinal {};
     };
 

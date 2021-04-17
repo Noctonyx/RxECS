@@ -3,10 +3,13 @@
 
 #include "ArchetypeManager.h"
 #include "Entity.h"
+//#include "EntityHandle.h"
 #include "robin_hood.h"
+#include "TableIterator.h"
 
 namespace ecs
 {
+    struct Table;
     struct QueryResult;
     class World;
     struct Column;
@@ -22,6 +25,9 @@ namespace ecs
 
         Table(World * world, uint32_t archetypeId);
         ~Table();
+
+        TableIterator begin();
+        TableIterator end();
 
         void addEntity(entity_t id);
         void removeEntity(entity_t id);

@@ -25,6 +25,16 @@ namespace ecs
         columns.clear();
     }
 
+    TableIterator Table::begin()
+    {
+        return TableIterator{ entities.begin(), world };
+    }
+
+    TableIterator Table::end()
+    {
+        return TableIterator{ entities.end(), world };
+    }
+
     void Table::addEntity(const entity_t id)
     {
         auto ix = static_cast<uint32_t>(entities.size());
