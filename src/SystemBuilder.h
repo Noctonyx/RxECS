@@ -12,7 +12,7 @@ namespace ecs
     {
         systemid_t id;
         queryid_t q = 0;
-        streamid_t stream = 0;
+        component_id_t stream = 0;
         World* world;
 
         QueryBuilder qb;
@@ -20,7 +20,8 @@ namespace ecs
         template<class ... TArgs>
         SystemBuilder& withQuery();
 
-        SystemBuilder& withStream(streamid_t);
+        template<class T>
+        SystemBuilder& withStream();
 
         template<class ... TArgs>
         SystemBuilder& without();

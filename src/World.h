@@ -155,11 +155,15 @@ namespace ecs
         void* getSingletonUpdate(component_id_t componentId);
 
         template <typename T>
-        streamid_t createStream();
-        streamid_t createStream(component_id_t id);
+        Stream * getStream();
+        Stream * getStream(component_id_t id);
 
-        void deleteStream(streamid_t id);
-        Stream * getStream(streamid_t id);    
+//        template <typename T>
+  //      streamid_t createStream();
+    //    streamid_t createStream(component_id_t id);
+
+//        void deleteStream(streamid_t id);
+  //      Stream * getStream(streamid_t id);    
 
         const Component * getComponentDetails(component_id_t id);
 
@@ -211,6 +215,7 @@ namespace ecs
         component_id_t componentBootstrapId;
 
         robin_hood::unordered_map<uint32_t, Table *> tables;
+        //robin_hood::unordered_map<component_id_t> streams;
 
         float deltaTime;
 
@@ -327,12 +332,10 @@ namespace ecs
     }
 
     template <typename T>
-    streamid_t World::createStream()
+    Stream * World::getStream()
     {
-        return createStream(getComponentId<T>());
+        return getStream(getComponentId<T>());
     }
-
-    
 
     template <typename T>
     component_id_t World::getComponentId()

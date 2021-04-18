@@ -12,15 +12,12 @@ TEST_SUITE("Streams")
 
         ecs::World world;
 
-        auto s = world.createStream<TestComponent2>();
-        world.deleteStream(s);
+        auto s = world.getStream<TestComponent2>();
 
-        s = world.createStream<TestComponent3>();
-
-        auto str = world.getStream(s);
+        s = world.getStream<TestComponent3>();
 
         for (uint32_t i = 0; i < 10; i++) {
-            str->add<TestComponent3>({.w = i});
+            s->add<TestComponent3>({.w = i});
         }
 
         struct Label1 {};
@@ -30,7 +27,7 @@ TEST_SUITE("Streams")
         int c2 = 0;
 
         world.createSystem()
-             .withStream(s)
+             .withStream<TestComponent3>()
              .label<Label1>()
              .execute<TestComponent3>([&c1](ecs::World *, const TestComponent3 *)
              {
@@ -41,7 +38,7 @@ TEST_SUITE("Streams")
              });
 
         world.createSystem()
-             .withStream(s)
+             .withStream<TestComponent3>()
              .after<Label1>()
              .execute<TestComponent3>([&c2](ecs::World *, const TestComponent3 *)
              {

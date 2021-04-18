@@ -276,31 +276,17 @@ namespace ecs
         return getUpdate(0, componentId);
     }
 
-    streamid_t World::createStream(component_id_t id)
+    Stream * World::getStream(component_id_t id)
     {
+        if(has<StreamComponent>(id)) {
+            return get<StreamComponent>(id)->ptr;
+        }
+      
         auto s = new Stream(id, this);
-        auto e = newEntity();
-        e.set<StreamComponent>({s});
+        
+        set<StreamComponent>(id, {s});
 
-        return e.id;
-    }
-
-    void World::deleteStream(streamid_t id)
-    {
-        auto p = getUpdate<StreamComponent>(id);
-        assert(p);
-        delete p->ptr;
-        p->ptr = nullptr;
-        destroy(id);
-    }
-
-    Stream * World::getStream(streamid_t id)
-    {
-        assert(isAlive(id));
-        auto p = get<StreamComponent>(id);
-        assert(p);
-
-        return p->ptr;
+        return s;
     }
 
     const Component * World::getComponentDetails(component_id_t id)

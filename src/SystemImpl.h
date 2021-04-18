@@ -17,6 +17,16 @@ namespace ecs
         return *this;
     }
 
+    template <class T>
+    SystemBuilder & SystemBuilder::withStream()
+    {
+        auto s = world->getUpdate<System>(id);
+
+        s->stream = world->getComponentId<T>();
+        stream = id;
+        return *this;
+    }
+
     template <class ... TArgs>
     SystemBuilder & SystemBuilder::without()
     {

@@ -44,7 +44,7 @@ namespace ecs
         std::set<entity_t> befores;
         std::set<entity_t> afters;
 
-        streamid_t stream = 0;
+        component_id_t stream = 0;
         //bool dirtyOrder = true;
     };
 

@@ -8,7 +8,7 @@ namespace ecs
     using component_id_t = uint64_t;
     using queryid_t = uint64_t;
     using systemid_t  = uint64_t;
-    using streamid_t = uint64_t;
+    //using streamid_t = uint64_t;
 
     inline uint32_t version(const entity_t id)
     {

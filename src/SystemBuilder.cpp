@@ -3,16 +3,6 @@
 
 namespace ecs
 {
-    SystemBuilder & SystemBuilder::withStream(streamid_t s)
-    {
-        stream = s;
-        auto sp = world->getUpdate<System>(id);
-
-        sp->stream = s;
-
-        return *this;
-    }
-
     SystemBuilder & SystemBuilder::withInheritance(bool inherit)
     {
         assert(q);
