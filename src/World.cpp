@@ -18,7 +18,7 @@ namespace ecs
         entities.resize(1);
         entities[0].alive = true;
         recycleStart = 0;
-        deltaTime = 0.f;
+        deltaTime_ = 0.f;
         tables.clear();
 
         ensureTableForArchetype(am.emptyArchetype);
@@ -307,10 +307,12 @@ namespace ecs
         return QueryBuilder{q.id, this};
     }
 
-    SystemBuilder World::createSystem()
+    SystemBuilder World::createSystem(const char * name)
     {
         auto s = newEntity();
         s.set<System>(System{.query = 0, .world = this});
+        s.set<Name>({ .name = name });
+        nameIndex[name] = s.id;
 
         return SystemBuilder{s.id, 0, 0, this, {}};
     }
@@ -342,7 +344,7 @@ namespace ecs
 
     void World::step(float delta)
     {
-        deltaTime = delta;
+        deltaTime_ = delta;
 #if 0
         bool anyDirty = true;
 

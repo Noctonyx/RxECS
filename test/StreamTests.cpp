@@ -26,7 +26,7 @@ TEST_SUITE("Streams")
         int c1 = 0;
         int c2 = 0;
 
-        world.createSystem()
+        world.createSystem("Stream1")
              .withStream<TestComponent3>()
              .label<Label1>()
              .execute<TestComponent3>([&c1](ecs::World *, const TestComponent3 *)
@@ -37,7 +37,7 @@ TEST_SUITE("Streams")
                  return false;
              });
 
-        world.createSystem()
+        world.createSystem("Stream3")
              .withStream<TestComponent3>()
              .after<Label1>()
              .execute<TestComponent3>([&c2](ecs::World *, const TestComponent3 *)

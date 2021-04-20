@@ -14,7 +14,7 @@ TEST_SUITE("Systems")
 
         uint32_t zz = 0;
 
-        auto system = world.createSystem().withQuery<TestComponent>()
+        auto system = world.createSystem("Basic").withQuery<TestComponent>()
                            .without<TestComponent2>()
                            .each<TestComponent>(
                                [&zz](ecs::EntityHandle, const TestComponent * xy)
@@ -42,7 +42,7 @@ TEST_SUITE("Systems")
 
         int c = 0;
 
-        world.createSystem().withQuery<TestComponent>()
+        world.createSystem("Ordering").withQuery<TestComponent>()
              .label<Label1>()
              .label<Label3>()
              .after<Label2>()
@@ -51,21 +51,21 @@ TEST_SUITE("Systems")
                  c++;
                  CHECK(c == 3);
              });
-        world.createSystem().withQuery<TestComponent>()
+        world.createSystem("Ordering2").withQuery<TestComponent>()
              .label<Label2>()
              .each<TestComponent>([&c](ecs::EntityHandle, TestComponent *)
              {
                  c++;
                  CHECK(c == 1);
              });
-        world.createSystem().withQuery<TestComponent>()
+        world.createSystem("Ordering3").withQuery<TestComponent>()
              .label<Label3>()
              .each<TestComponent>([&c](ecs::EntityHandle, TestComponent *)
              {
                  c++;
                  CHECK(c == 4);
              });
-        world.createSystem().withQuery<TestComponent>()
+        world.createSystem("Ordering4").withQuery<TestComponent>()
              .before<Label3>()
              .before<Label1>()
              .each<TestComponent>([&c](ecs::EntityHandle, TestComponent *)
@@ -87,7 +87,7 @@ TEST_SUITE("Systems")
 
         uint32_t zz = 0;
 
-        auto system = world.createSystem().withQuery<TestComponent>()
+        auto system = world.createSystem("Set").withQuery<TestComponent>()
                            .without<TestComponent2>()
                            .withSet(sete.id)
                            .each<TestComponent>(
@@ -115,7 +115,7 @@ TEST_SUITE("Systems")
 
         uint32_t zz = 0;
 
-        auto system = world.createSystem().withQuery<TestComponent>()
+        auto system = world.createSystem("Disabling").withQuery<TestComponent>()
                            .without<TestComponent2>()
                            .each<TestComponent>(
                                [&zz](ecs::EntityHandle, const TestComponent * xy)
@@ -142,7 +142,7 @@ TEST_SUITE("Systems")
 
         uint32_t zz = 0;
 
-        auto system = world.createSystem()
+        auto system = world.createSystem("Execute")
                            .execute([&zz](ecs::World *)
                            {
                                zz = 2;
