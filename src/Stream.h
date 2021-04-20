@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <mutex>
 #include <span>
 #include <vector>
 
@@ -23,6 +24,8 @@ namespace ecs
         Column * column;
         std::vector<bool> active;
 
+        std::mutex mut;
+
         Stream(component_id_t componentId, World * world);
         ~Stream();
 
@@ -38,6 +41,8 @@ namespace ecs
     template <typename T>
     void Stream::add(T && value)
     {
+        std::lock_guard guard(mut);
+
         auto c = column->count;
         size_t ix = active.size();
 
@@ -51,6 +56,8 @@ namespace ecs
     template <typename U, typename Func>
     void Stream::each(Func && f)
     {
+        std::lock_guard guard(mut);
+
         //static_assert(std::is_const_v<U>, "Parameter must be const");
         std::tuple<World *, const U *> result;
 
