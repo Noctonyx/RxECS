@@ -195,7 +195,12 @@ namespace ecs
 
         std::string description(entity_t id);
         Archetype& getEntityArchetypeDetails(entity_t id);
-       
+
+
+        [[nodiscard]] float deltaTime() const
+        {
+            return deltaTime_;
+        }
 
     protected:
         uint32_t getEntityArchetype(entity_t id) const;
@@ -217,7 +222,7 @@ namespace ecs
         robin_hood::unordered_map<uint32_t, Table *> tables;
         //robin_hood::unordered_map<component_id_t> streams;
 
-        float deltaTime;
+        float deltaTime_;
 
         queryid_t systemQuery;
         queryid_t queryQuery = 0;
