@@ -228,6 +228,8 @@ namespace ecs
         queryid_t queryQuery = 0;
         queryid_t streamQuery = 0;
 
+        entity_t singletonId;
+
         std::vector<DeferredCommand> deferredCommands;
 
         std::vector<entity_t> systemOrder{};

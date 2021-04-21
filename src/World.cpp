@@ -45,6 +45,8 @@ namespace ecs
         // query to find systems
         systemQuery = createQuery<System>().withRelation<SetForSystem, SystemSet>().id;
         streamQuery = createQuery<StreamComponent>().id;
+
+        singletonId = newEntity().id;
     }
 
     World::~World()
@@ -195,6 +197,9 @@ namespace ecs
 
     const void * World::get(entity_t id, component_id_t componentId, bool inherited)
     {
+        if (!isAlive(id)) {
+            return nullptr;
+        }
         auto at = getEntityArchetype(id);
         auto table = tables[at];
 
@@ -214,6 +219,10 @@ namespace ecs
 
     void * World::getUpdate(entity_t id, component_id_t componentId)
     {
+        if (!isAlive(id)) {
+            return nullptr;
+        }
+
         auto at = getEntityArchetype(id);
         auto table = tables[at];
 
@@ -247,43 +256,43 @@ namespace ecs
 
     void World::addSingleton(component_id_t componentId)
     {
-        add(0, componentId);
+        add(singletonId, componentId);
     }
 
     bool World::hasSingleton(component_id_t componentId)
     {
-        auto at = getEntityArchetype(0);
+        auto at = getEntityArchetype(singletonId);
         return am.archetypes[at].components.find(componentId) != am.archetypes[at].components.end();
     }
 
     void World::removeSingleton(component_id_t componentId)
     {
-        remove(0, componentId);
+        remove(singletonId, componentId);
     }
 
     void World::setSingleton(component_id_t componentId, const void * ptr)
     {
-        set(0, componentId, ptr);
+        set(singletonId, componentId, ptr);
     }
 
     const void * World::getSingleton(component_id_t componentId)
     {
-        return get(0, componentId);
+        return get(singletonId, componentId);
     }
 
     void * World::getSingletonUpdate(component_id_t componentId)
     {
-        return getUpdate(0, componentId);
+        return getUpdate(singletonId, componentId);
     }
 
     Stream * World::getStream(component_id_t id)
     {
-        if(has<StreamComponent>(id)) {
+        if (has<StreamComponent>(id)) {
             return get<StreamComponent>(id)->ptr;
         }
-      
+
         auto s = new Stream(id, this);
-        
+
         set<StreamComponent>(id, {s});
 
         return s;
@@ -311,7 +320,7 @@ namespace ecs
     {
         auto s = newEntity();
         s.set<System>(System{.query = 0, .world = this});
-        s.set<Name>({ .name = name });
+        s.set<Name>({.name = name});
         nameIndex[name] = s.id;
 
         return SystemBuilder{s.id, 0, 0, this, {}};
@@ -409,8 +418,8 @@ namespace ecs
 
     std::string World::description(entity_t id)
     {
-        const Name* n = get<Name>(id);
-        if(n) {
+        const Name * n = get<Name>(id);
+        if (n) {
             return n->name;
         }
         std::string nm = "Entity#" + std::to_string(index(id)) + ":" + std::to_string(version(id));
