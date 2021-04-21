@@ -1,5 +1,6 @@
 #include "SystemBuilder.h"
 #include "System.h"
+#include "EntityImpl.h"
 
 namespace ecs
 {

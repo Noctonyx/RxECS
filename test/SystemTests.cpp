@@ -3,6 +3,7 @@
 #include "doctest.h"
 #include "RxECS.h"
 #include "TestComponents.h"
+#include "EntityImpl.h"
 
 TEST_SUITE("Systems")
 {

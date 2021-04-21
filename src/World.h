@@ -119,6 +119,9 @@ namespace ecs
         template <typename T>
         T * getUpdate(entity_t id);
 
+        template<typename T, typename U>
+        const U* getRelated(entity_t id);
+
         const void * get(entity_t id, component_id_t componentId, bool inherited = false);
         void * getUpdate(entity_t id, component_id_t componentId);
 
@@ -282,6 +285,17 @@ namespace ecs
     {
         auto ptr = static_cast<T *>(getUpdate(id, getComponentId<T>()));
         return ptr;
+    }
+
+    template <typename T, typename U>
+    const U * World::getRelated(entity_t id)
+    {
+        auto g = get<T>(id);
+        if(!g) {
+            return nullptr;
+        }
+
+        return get<U>(g->entity);
     }
 
     template <typename T>
