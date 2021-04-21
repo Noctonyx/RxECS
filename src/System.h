@@ -6,7 +6,7 @@
 namespace ecs
 {
     class World;
-
+#if 0
     struct Pipeline
     {
         struct StartInit{};
@@ -20,8 +20,20 @@ namespace ecs
         struct StartFinal {};
         struct Final{};
         struct EndFinal {};
+
     };
 
+    namespace PipelineGroup
+    {
+        struct PreFrame {};
+        struct Early {};
+        struct FixedUpdate {};
+        struct Update {};
+        struct PreRender {};
+        struct PostRender {};
+        struct Final {};
+    };
+#endif
     struct SystemSet
     {
         bool enabled = true;
@@ -30,6 +42,16 @@ namespace ecs
     struct SetForSystem : Relation
     {
 
+    };
+
+    struct SystemGroup
+    {
+        uint32_t sequence;
+
+        bool fixed;
+
+        float delta;
+        float rate;
     };
 
     struct System
@@ -43,6 +65,10 @@ namespace ecs
         std::set<entity_t> labels;
         std::set<entity_t> befores;
         std::set<entity_t> afters;
+
+        entity_t groupId = 0;
+
+        bool thread = false;
 
         component_id_t stream = 0;
         //bool dirtyOrder = true;

@@ -59,4 +59,29 @@ namespace ecs
 
         return *this;
     }
+
+    SystemBuilder & SystemBuilder::inGroup(entity_t group)
+    {
+        auto sp = world->getUpdate<System>(id);
+
+        sp->groupId = group;
+        return *this;
+    }
+
+    SystemBuilder & SystemBuilder::inGroup(const char * name)
+    {
+        auto e = world->lookup(name);
+        assert(e.isAlive());
+        assert(e.has<SystemGroup>());
+        return inGroup(e.id);
+    }
+
+    SystemBuilder & SystemBuilder::withJob()
+    {
+        auto sp = world->getUpdate<System>(id);
+
+        sp->thread = true;
+
+        return *this;
+    }
 }

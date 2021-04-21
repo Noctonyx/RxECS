@@ -52,6 +52,11 @@ namespace ecs
         SystemBuilder& withSet(entity_t setId);
         SystemBuilder& removeSet();
 
+        SystemBuilder& inGroup(entity_t group);
+        SystemBuilder& inGroup(const char * name);
+
+        SystemBuilder& withJob();
+
         template <typename ... U, typename Func>
         SystemBuilder & each(Func&& f);
 
