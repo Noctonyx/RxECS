@@ -44,6 +44,7 @@ namespace ecs
 
         // query to find systems
         systemQuery = createQuery<System>().withRelation<SetForSystem, SystemSet>().id;
+        systemGroupQuery = createQuery<SystemGroup>().id;
         streamQuery = createQuery<StreamComponent>().id;
 
         singletonId = newEntity().id;
@@ -51,6 +52,13 @@ namespace ecs
 
     World::~World()
     {
+        getResults(streamQuery).each<StreamComponent>([this](EntityHandle, StreamComponent * s)
+        {
+            //                removeDeferred<StreamComponent>(e.id);
+            delete s->ptr;
+        });
+        //      executeDeferred();
+
         for (auto & [k, v]: tables) {
             delete v;
         }
@@ -323,6 +331,8 @@ namespace ecs
         s.set<Name>({.name = name});
         nameIndex[name] = s.id;
 
+        markSystemsDirty();
+
         return SystemBuilder{s.id, 0, 0, this, {}};
     }
 
@@ -333,6 +343,8 @@ namespace ecs
 
     void World::deleteSystem(systemid_t s)
     {
+        markSystemsDirty();
+
         auto sys = get<System>(s);
         if (isAlive(sys->query)) {
             deleteQuery(sys->query);
@@ -349,6 +361,44 @@ namespace ecs
 
         return QueryResult(this, aq->tables, aq->with, aq->relations, aq->singleton,
                            aq->inheritamce);
+    }
+
+    void World::executeSystemGroup(entity_t pg)
+    {
+        auto gd = getUpdate<SystemGroup>(pg);
+
+        float savedDelta = deltaTime_;
+
+        if (gd->fixed) {
+            gd->delta += deltaTime_;
+            deltaTime_ = gd->rate;
+        }
+        do {
+            if (gd->fixed) {
+                if (gd->delta >= gd->rate) {
+                    gd->delta -= gd->rate;
+                } else {
+                    break;
+                }
+            }
+            for (auto s: systemOrder[pg]) {
+                if (isAlive(s)) {
+                    if (auto system = get<System>(s); system) {
+                        if (system->query) {
+                            auto res = getResults(system->query);
+                            system->queryProcessor(res);
+                        } else if (system->stream) {
+                            system->streamProcessor(getStream(system->stream));
+                        } else {
+                            system->executeProcessor();
+                        }
+                        //executeDeferred();
+                    }
+                }
+            }
+        } while (gd->fixed && gd->delta >= gd->rate);
+
+        deltaTime_ = savedDelta;
     }
 
     void World::step(float delta)
@@ -368,21 +418,12 @@ namespace ecs
 #if 0
         }
 #endif
-        for (auto s: systemOrder) {
-            if (isAlive(s)) {
-                if (auto system = get<System>(s); system) {
-                    if (system->query) {
-                        auto res = getResults(system->query);
-                        system->queryProcessor(res);
-                    } else if (system->stream) {
-                        system->streamProcessor(getStream(system->stream));
-                    } else {
-                        system->executeProcessor();
-                    }
-                    executeDeferred();
-                }
-            }
+
+        for (auto pg: pipelineGroupSequence) {
+            executeSystemGroup(pg);
+            executeDeferred();
         }
+
         getResults(streamQuery).each<StreamComponent>([](EntityHandle, StreamComponent * s)
         {
             s->ptr->clear();
@@ -422,7 +463,8 @@ namespace ecs
         if (n) {
             return n->name;
         }
-        std::string nm = "Entity#" + std::to_string(index(id)) + ":" + std::to_string(version(id));
+        std::string nm = "Entity#" + std::to_string(index(id)) + ":" + std::to_string(
+            version(id));
         return nm;
     }
 
@@ -488,22 +530,22 @@ namespace ecs
         return WorldIterator{this, am.archetypes.end()};
     }
 
-    void World::recalculateSystemOrder()
+    void World::recalculateGroupSystemOrder(entity_t group, std::vector<entity_t> systems)
     {
-        systemOrder.clear();
+        systemOrder[group].clear();
+
         std::unordered_map<entity_t, uint32_t> labelCounts;
         std::unordered_map<entity_t, uint32_t> labelPreCounts;
-        std::deque<std::pair<entity_t, System *>> toProcess;
+        std::deque<std::pair<entity_t, const System *>> toProcess;
         std::unordered_map<entity_t, std::set<entity_t>> ready;
 
-        getResults(systemQuery).each<System, SystemSet>(
-            [&](EntityHandle e, System * s, const SystemSet * set)
-            {
-                if ((set && !set->enabled) || !s->enabled) {
-                    return;
-                }
-                toProcess.push_back({e.id, s});
-            });
+        for (auto & s: systems) {
+            auto sys = get<System>(s);
+
+            if (sys->enabled) {
+                toProcess.push_back({s, sys});
+            }
+        }
 
         for (auto & [e, s]: toProcess) {
             for (auto & l: s->labels) {
@@ -545,9 +587,53 @@ namespace ecs
             for (auto & bf: system->befores) {
                 labelPreCounts[bf]--;
             }
-            systemOrder.push_back(entity);
+            systemOrder[group].push_back(entity);
             //getUpdate<System>(entity)->dirtyOrder = false;
             toProcess.pop_front();
+        }
+    }
+
+    void World::recalculateSystemOrder()
+    {
+        if (!systemOrderDirty) {
+            return;
+        }
+
+        systemOrder.clear();
+        std::unordered_map<entity_t, std::vector<entity_t>> systems;
+
+        getResults(systemQuery).each<System, SystemSet>(
+            [&](EntityHandle e, System * s, const SystemSet * set)
+            {
+                if ((set && !set->enabled) || !s->enabled) {
+                    return;
+                }
+                systems[s->groupId].push_back(e.id);
+            }
+        );
+
+        std::vector<std::pair<SystemGroup *, entity_t>> grps;
+
+        getResults(systemGroupQuery).each<SystemGroup>(
+            [&grps](EntityHandle e, SystemGroup * g)
+            {
+                grps.push_back({g, e.id});
+            }
+        );
+
+        std::ranges::sort(grps, [](std::pair<SystemGroup *, entity_t> a,
+                                   std::pair<SystemGroup *, entity_t> b)
+        {
+            return a.first->sequence < b.first->sequence;
+        });
+
+        pipelineGroupSequence.clear();
+        for (auto gg: grps) {
+            pipelineGroupSequence.push_back(gg.second);
+        }
+
+        for (auto g: pipelineGroupSequence) {
+            recalculateGroupSystemOrder(g, systems[g]);
         }
     }
 }

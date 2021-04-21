@@ -50,7 +50,7 @@ namespace ecs
 
         return *this;
     }
-
+#if 0
     SystemBuilder & SystemBuilder::removeSet()
     {
         world->remove<SetForSystem>(id);
@@ -59,9 +59,11 @@ namespace ecs
 
         return *this;
     }
-
+#endif
     SystemBuilder & SystemBuilder::inGroup(entity_t group)
     {
+        world->markSystemsDirty();
+
         auto sp = world->getUpdate<System>(id);
 
         sp->groupId = group;
@@ -70,6 +72,8 @@ namespace ecs
 
     SystemBuilder & SystemBuilder::inGroup(const char * name)
     {
+        world->markSystemsDirty();
+
         auto e = world->lookup(name);
         assert(e.isAlive());
         assert(e.has<SystemGroup>());
@@ -78,6 +82,8 @@ namespace ecs
 
     SystemBuilder & SystemBuilder::withJob()
     {
+        world->markSystemsDirty();
+
         auto sp = world->getUpdate<System>(id);
 
         sp->thread = true;

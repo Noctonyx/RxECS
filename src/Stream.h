@@ -11,11 +11,6 @@
 
 namespace ecs
 {
-    struct StreamComponent
-    {
-        Stream * ptr;
-    };
-
     struct Stream
     {
         component_id_t componentId;
@@ -74,4 +69,9 @@ namespace ecs
             ix++;
         }
     }
+
+    struct StreamComponent
+    {
+        Stream* ptr;
+    };
 }

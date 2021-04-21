@@ -34,11 +34,11 @@ namespace ecs
         uint32_t row;
     };
 
-    struct Prefab {};
+    struct Prefab { };
 
     struct WorldIterator
     {
-        World* world;
+        World * world;
         std::vector<Archetype>::iterator it;
 
         WorldIterator & operator++()
@@ -58,7 +58,7 @@ namespace ecs
         }
     };
 
-    enum class DeferredCommandType:  uint8_t
+    enum class DeferredCommandType: uint8_t
     {
         Destroy,
         Add,
@@ -71,8 +71,8 @@ namespace ecs
         DeferredCommandType type;
         entity_t entity;
         component_id_t component;
-        void* ptr;
-//        void 
+        void * ptr;
+        //        void 
     };
 
     class World
@@ -83,11 +83,11 @@ namespace ecs
         World();
         ~World();
 
-        EntityHandle newEntity(const char * name = nullptr );
+        EntityHandle newEntity(const char * name = nullptr);
         //entity_t newEntity();
         EntityHandle instantiate(entity_t prefab);
 
-        EntityHandle lookup(const char* name);
+        EntityHandle lookup(const char * name);
         EntityHandle lookup(const std::string & name);
 
         [[nodiscard]] bool isAlive(entity_t id) const;
@@ -119,8 +119,8 @@ namespace ecs
         template <typename T>
         T * getUpdate(entity_t id);
 
-        template<typename T, typename U>
-        const U* getRelated(entity_t id);
+        template <typename T, typename U>
+        const U * getRelated(entity_t id);
 
         const void * get(entity_t id, component_id_t componentId, bool inherited = false);
         void * getUpdate(entity_t id, component_id_t componentId);
@@ -130,8 +130,8 @@ namespace ecs
         void set(entity_t id, component_id_t componentId, const void * ptr);
 
         template <typename T>
-        void setDeferred(entity_t id, T&& value);
-        void setDeferred(entity_t id, component_id_t componentId, void* ptr);       
+        void setDeferred(entity_t id, T && value);
+        void setDeferred(entity_t id, component_id_t componentId, void * ptr);
 
         template <typename T>
         void addSingleton();
@@ -146,27 +146,27 @@ namespace ecs
         void removeSingleton(component_id_t componentId);
 
         template <typename T>
-        void setSingleton(const T& value);
-        void setSingleton(component_id_t componentId, const void* ptr);
+        void setSingleton(const T & value);
+        void setSingleton(component_id_t componentId, const void * ptr);
 
         template <typename T>
-        const T* getSingleton();
+        const T * getSingleton();
         template <typename T>
-        T* getSingletonUpdate();
+        T * getSingletonUpdate();
 
-        const void* getSingleton(component_id_t componentId);
-        void* getSingletonUpdate(component_id_t componentId);
+        const void * getSingleton(component_id_t componentId);
+        void * getSingletonUpdate(component_id_t componentId);
 
         template <typename T>
         Stream * getStream();
         Stream * getStream(component_id_t id);
 
-//        template <typename T>
-  //      streamid_t createStream();
-    //    streamid_t createStream(component_id_t id);
+        //        template <typename T>
+        //      streamid_t createStream();
+        //    streamid_t createStream(component_id_t id);
 
-//        void deleteStream(streamid_t id);
-  //      Stream * getStream(streamid_t id);    
+        //        void deleteStream(streamid_t id);
+        //      Stream * getStream(streamid_t id);    
 
         const Component * getComponentDetails(component_id_t id);
 
@@ -183,6 +183,7 @@ namespace ecs
         void deleteQuery(queryid_t q);
         void deleteSystem(systemid_t s);
         QueryResult getResults(queryid_t q);
+        void executeSystemGroup(entity_t pg);
 
         void step(float delta);
 
@@ -197,12 +198,17 @@ namespace ecs
         void executeDeferred();
 
         std::string description(entity_t id);
-        Archetype& getEntityArchetypeDetails(entity_t id);
+        Archetype & getEntityArchetypeDetails(entity_t id);
 
 
         [[nodiscard]] float deltaTime() const
         {
             return deltaTime_;
+        }
+
+        void markSystemsDirty()
+        {
+            systemOrderDirty = true;
         }
 
     protected:
@@ -212,6 +218,7 @@ namespace ecs
         void ensureTableForArchetype(uint32_t);
 
         void recalculateSystemOrder();
+        void recalculateGroupSystemOrder(entity_t group, std::vector<entity_t> systems);
 
     private:
         std::vector<EntityEntry> entities{};
@@ -228,6 +235,7 @@ namespace ecs
         float deltaTime_;
 
         queryid_t systemQuery;
+        queryid_t systemGroupQuery;
         queryid_t queryQuery = 0;
         queryid_t streamQuery = 0;
 
@@ -235,8 +243,12 @@ namespace ecs
 
         std::vector<DeferredCommand> deferredCommands;
 
-        std::vector<entity_t> systemOrder{};
+        std::vector<entity_t> pipelineGroupSequence;
+        std::unordered_map<entity_t, std::vector<entity_t>> systemOrder;
+        //std::vector<entity_t> systemOrder{};
         robin_hood::unordered_map<std::string, entity_t> nameIndex{};
+
+        bool systemOrderDirty = true;
 
     public:
         ArchetypeManager am;
@@ -291,7 +303,7 @@ namespace ecs
     const U * World::getRelated(entity_t id)
     {
         auto g = get<T>(id);
-        if(!g) {
+        if (!g) {
             return nullptr;
         }
 
@@ -310,9 +322,9 @@ namespace ecs
         auto c = getComponentId<T>();
 
         auto cd = getComponentDetails(c);
-        char* cp = new char[cd->size];
+        char * cp = new char[cd->size];
 
-        T* p = new (cp) T(std::move(value));
+        T * p = new(cp) T(std::move(value));
         setDeferred(id, getComponentId<T>(), p);
     }
 
@@ -343,7 +355,7 @@ namespace ecs
     template <typename T>
     const T * World::getSingleton()
     {
-        return static_cast<const T*>(getSingleton(getComponentId<T>()));
+        return static_cast<const T *>(getSingleton(getComponentId<T>()));
     }
 
     template <typename T>
@@ -365,7 +377,7 @@ namespace ecs
         //static_assert(std::is_trivially_copyable<T>(), "Cannot be a component");
         static_assert(std::is_move_constructible<T>(), "Cannot be a component");
         static_assert(std::is_default_constructible<T>(), "Cannot be a component");
-       // static_assert(std::is_standard_layout<T>(), "Cannot be a component");
+        // static_assert(std::is_standard_layout<T>(), "Cannot be a component");
 
         auto v = std::type_index(typeid(T));
         if (componentMap.find(v) != componentMap.end()) {
@@ -389,7 +401,7 @@ namespace ecs
     template <class ... TArgs>
     QueryBuilder World::createQuery()
     {
-        std::set<component_id_t> with = { getComponentId<TArgs>()... };
+        std::set<component_id_t> with = {getComponentId<TArgs>()...};
         return createQuery(with);
     }
 }

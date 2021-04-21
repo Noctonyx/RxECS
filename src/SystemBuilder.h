@@ -50,7 +50,9 @@ namespace ecs
         SystemBuilder& after(const component_id_t label);
 
         SystemBuilder& withSet(entity_t setId);
+#if 0
         SystemBuilder& removeSet();
+#endif
 
         SystemBuilder& inGroup(entity_t group);
         SystemBuilder& inGroup(const char * name);

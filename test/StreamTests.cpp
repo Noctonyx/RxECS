@@ -13,6 +13,7 @@ TEST_SUITE("Streams")
         ecs::World world;
 
         auto s = world.getStream<TestComponent2>();
+        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false});
 
         s = world.getStream<TestComponent3>();
 
@@ -20,8 +21,8 @@ TEST_SUITE("Streams")
             s->add<TestComponent3>({.w = i});
         }
 
-        struct Label1 {};
-        struct Label2 {};
+        struct Label1 { };
+        struct Label2 { };
 
         int c1 = 0;
         int c2 = 0;
@@ -29,6 +30,7 @@ TEST_SUITE("Streams")
         world.createSystem("Stream1")
              .withStream<TestComponent3>()
              .label<Label1>()
+             .inGroup("Group:1")
              .execute<TestComponent3>([&c1](ecs::World *, const TestComponent3 *)
              {
                  c1++;
@@ -40,6 +42,7 @@ TEST_SUITE("Streams")
         world.createSystem("Stream3")
              .withStream<TestComponent3>()
              .after<Label1>()
+             .inGroup("Group:1")
              .execute<TestComponent3>([&c2](ecs::World *, const TestComponent3 *)
              {
                  c2++;
@@ -52,6 +55,7 @@ TEST_SUITE("Streams")
         world.step(0.01f);
         CHECK(c1 == 10);
         CHECK(c2 == 5);
+
         CHECK(_CrtCheckMemory());
     }
 }
