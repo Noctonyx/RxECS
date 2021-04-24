@@ -35,7 +35,7 @@ namespace ecs
     {
         std::set<component_id_t> components;
         Hash hash_value;
-        uint32_t id;
+        uint16_t id;
         //World* world;
 
         void generateHash()
@@ -50,8 +50,8 @@ namespace ecs
 
     struct ArchetypeTransition
     {
-        uint32_t from_at{};
-        uint32_t to_at{};
+        uint16_t from_at{};
+        uint16_t to_at{};
 
         std::vector<component_id_t> removeComponents{};
         std::vector<component_id_t> addComponents{};
@@ -66,13 +66,13 @@ namespace ecs
             e.generateHash();
 
             auto ix = archetypes.size();
-            e.id = static_cast<uint32_t>(ix);
-            emptyArchetype = static_cast<uint32_t>(ix);
+            e.id = static_cast<uint16_t>(ix);
+            emptyArchetype = static_cast<uint16_t>(ix);
             archetypeMap.emplace(e.hash_value, emptyArchetype);
             archetypes.push_back(e);
         }
 
-        ArchetypeTransition & addComponentToArchetype(uint32_t at, component_id_t componentId)
+        ArchetypeTransition & addComponentToArchetype(uint16_t at, component_id_t componentId)
         {
             if (!addCache.contains({ at, componentId })) {
 
@@ -87,7 +87,7 @@ namespace ecs
                     h.u64(v);
                 }
 
-                uint32_t newId;
+                uint16_t newId;
 
                 newA.hash_value = h.get();
                 if (archetypeMap.contains(newA.hash_value)) {
@@ -95,7 +95,7 @@ namespace ecs
                 }
                 else {
 
-                    auto ix = static_cast<uint32_t>(archetypes.size());
+                    auto ix = static_cast<uint16_t>(archetypes.size());
                     newA.id = ix;
                     //emptyArchetype = ix;
                     archetypeMap.emplace(newA.hash_value, ix);
@@ -114,7 +114,7 @@ namespace ecs
             return addCache[{at, componentId}];
         }
 
-        ArchetypeTransition & removeComponentFromArchetype(uint32_t at, component_id_t componentId)
+        ArchetypeTransition & removeComponentFromArchetype(uint16_t at, component_id_t componentId)
         {
             if (!removeCache.contains({at, componentId})) {
 
@@ -130,13 +130,13 @@ namespace ecs
                 }
                 new_archetype.hash_value = h.get();
 
-                uint32_t newid;
+                uint16_t newid;
 
                 if (archetypeMap.find(new_archetype.hash_value) != archetypeMap.end()) {
                     newid = archetypeMap[new_archetype.hash_value];
                     trans.to_at = newid;
                 } else {
-                    auto ix = static_cast<uint32_t>(archetypes.size());
+                    auto ix = static_cast<uint16_t>(archetypes.size());
                     //emptyArchetype = ix;
                     archetypeMap.emplace(new_archetype.hash_value, ix);
                     new_archetype.id = ix;
@@ -158,19 +158,19 @@ namespace ecs
             return removeCache[{at, componentId}];
         }
 
-        Archetype & getArchetypeDetails(uint32_t id)
+        Archetype & getArchetypeDetails(uint16_t id)
         {
             return archetypes[id];
         }
 
         std::vector<Archetype> archetypes{};
-        robin_hood::unordered_map<Hash, uint32_t> archetypeMap;
+        robin_hood::unordered_map<Hash, uint16_t> archetypeMap;
 
-        robin_hood::unordered_map<robin_hood::pair<uint32_t, component_id_t>, ArchetypeTransition>
+        robin_hood::unordered_map<robin_hood::pair<uint16_t, component_id_t>, ArchetypeTransition>
         addCache;
-        robin_hood::unordered_map<robin_hood::pair<uint32_t, component_id_t>, ArchetypeTransition>
+        robin_hood::unordered_map<robin_hood::pair<uint16_t, component_id_t>, ArchetypeTransition>
         removeCache;
 
-        uint32_t emptyArchetype;
+        uint16_t emptyArchetype;
     };
 }

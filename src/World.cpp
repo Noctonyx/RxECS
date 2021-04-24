@@ -473,14 +473,14 @@ namespace ecs
         return am.getArchetypeDetails(getEntityArchetype(id));
     }
 
-    uint32_t World::getEntityArchetype(entity_t id) const
+    uint16_t World::getEntityArchetype(entity_t id) const
     {
         //assert(isAlive(id));
         auto & ee = entities[index(id)];
         return ee.archetype;
     }
 
-    void World::moveEntity(entity_t id, uint32_t from, const ArchetypeTransition & trans)
+    void World::moveEntity(entity_t id, uint16_t from, const ArchetypeTransition & trans)
     {
         // assert(isAlive(id));
         assert(entities[index(id)].archetype == from);
@@ -491,7 +491,7 @@ namespace ecs
         Table::moveEntity(this, tables[from], tables[trans.to_at], id, trans);
     }
 
-    void World::addTableToActiveQueries(Table * table, uint32_t aid)
+    void World::addTableToActiveQueries(Table * table, uint16_t aid)
     {
         auto & ad = am.getArchetypeDetails(aid);
         /* This will only be 0 during world bootstrap, ie when we are adding queryquery */
@@ -508,7 +508,7 @@ namespace ecs
         }
     }
 
-    void World::ensureTableForArchetype(uint32_t aid)
+    void World::ensureTableForArchetype(uint16_t aid)
     {
         if (tables.find(aid) != tables.end()) {
             return;

@@ -23,7 +23,7 @@ namespace ecs
 
         robin_hood::unordered_map<component_id_t, Column *> columns;
 
-        Table(World * world, uint32_t archetypeId);
+        Table(World * world, uint16_t archetypeId);
         ~Table();
 
         TableIterator begin();

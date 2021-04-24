@@ -23,15 +23,9 @@ namespace ecs
     struct EntityEntry
     {
         uint32_t version;
-        uint32_t archetype;
         uint32_t row;
+        uint16_t archetype;
         bool alive;
-    };
-
-    struct EntityArchetypeEntry
-    {
-        uint32_t archetype;
-        uint32_t row;
     };
 
     struct Prefab { };
@@ -190,7 +184,7 @@ namespace ecs
         WorldIterator begin();
         WorldIterator end();
 
-        Table * getTableForArchetype(uint32_t t)
+        Table * getTableForArchetype(uint16_t t)
         {
             return tables[t];
         }
@@ -212,10 +206,10 @@ namespace ecs
         }
 
     protected:
-        uint32_t getEntityArchetype(entity_t id) const;
-        void moveEntity(entity_t id, uint32_t from, const ArchetypeTransition & trans);
-        void addTableToActiveQueries(Table * table, uint32_t aid);
-        void ensureTableForArchetype(uint32_t);
+        uint16_t getEntityArchetype(entity_t id) const;
+        void moveEntity(entity_t id, uint16_t from, const ArchetypeTransition & trans);
+        void addTableToActiveQueries(Table * table, uint16_t aid);
+        void ensureTableForArchetype(uint16_t);
 
         void recalculateSystemOrder();
         void recalculateGroupSystemOrder(entity_t group, std::vector<entity_t> systems);
@@ -229,7 +223,7 @@ namespace ecs
         Component componentBootstrap;
         component_id_t componentBootstrapId;
 
-        robin_hood::unordered_map<uint32_t, Table *> tables;
+        robin_hood::unordered_map<uint16_t, Table *> tables;
         //robin_hood::unordered_map<component_id_t> streams;
 
         float deltaTime_;

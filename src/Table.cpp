@@ -5,7 +5,7 @@
 
 namespace ecs
 {
-    Table::Table(World * world, uint32_t archetypeId)
+    Table::Table(World * world, uint16_t archetypeId)
         : world(world)
         , archetypeId(archetypeId)
     {
