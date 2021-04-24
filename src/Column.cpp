@@ -14,7 +14,7 @@ namespace ecs
         componentCopier = cd->componentCopier;
         componentMover = cd->componentMover;
 
-        auto const initial_size = 100;
+        auto const initial_size = 10;
 
         ptr = new std::byte[initial_size * cd->size];
         count = 0;

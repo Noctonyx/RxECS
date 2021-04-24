@@ -112,6 +112,7 @@ TEST_SUITE("Systems")
         CHECK(zz == 2);
         zz = 0;
         sete.getUpdate<ecs::SystemSet>()->enabled = false;
+        world.markSystemsDirty();
         world.step(0.01f);
 
         CHECK(zz == 0);
@@ -141,6 +142,7 @@ TEST_SUITE("Systems")
         CHECK(zz == 2);
         zz = 0;
         world.getUpdate<ecs::System>(system.id)->enabled = false;
+        world.markSystemsDirty();
         world.step(0.01f);
 
         CHECK(zz == 0);
@@ -155,19 +157,20 @@ TEST_SUITE("Systems")
         world.newEntity("Group:1").set<ecs::SystemGroup>({1, false});
 
         uint32_t zz = 0;
-
-        auto system = world.createSystem("Execute")
-                           .inGroup("Group:1")
-                           .execute([&zz](ecs::World *)
-                           {
-                               zz = 2;
-                           });
-
+        {
+            auto system = world.createSystem("Execute")
+                .inGroup("Group:1")
+                .execute([&zz, &world](ecs::World* w)
+                    {
+                        zz = 2;
+                        CHECK(w == &world);
+                    });
+        }
         world.step(0.01f);
 
         CHECK(zz == 2);
 
-        world.deleteSystem(system.id);
+        //world.deleteSystem(system.id);
     }
 
     TEST_CASE("Multiple Groups")

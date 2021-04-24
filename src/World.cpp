@@ -390,7 +390,7 @@ namespace ecs
                         } else if (system->stream) {
                             system->streamProcessor(getStream(system->stream));
                         } else {
-                            system->executeProcessor();
+                            system->executeProcessor(this);
                         }
                         //executeDeferred();
                     }
@@ -635,5 +635,7 @@ namespace ecs
         for (auto g: pipelineGroupSequence) {
             recalculateGroupSystemOrder(g, systems[g]);
         }
+
+        systemOrderDirty = false;
     }
 }

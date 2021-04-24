@@ -112,7 +112,7 @@ namespace ecs
         auto mp = get_mutable_parameters(f);
         (void)mp;
 
-        s->queryProcessor = [&](QueryResult& res)
+        s->queryProcessor = [=](QueryResult& res)
         {
             res.each<U...>(f);
         };
@@ -129,9 +129,9 @@ namespace ecs
         auto s = world->getUpdate<System>(id);
         assert(s->groupId);
 
-        s->executeProcessor = [&]()
+        s->executeProcessor = [=](ecs::World * w)
         {
-            f(world);
+            f(w);
         };
 
         return *this;
@@ -146,7 +146,7 @@ namespace ecs
         auto s = world->getUpdate<System>(id);
         assert(s->groupId);
 
-        s->streamProcessor = [&](Stream* stream)
+        s->streamProcessor = [=](Stream* stream)
         {
             stream->each<U>(f);
         };

@@ -1,6 +1,7 @@
 #include "SystemBuilder.h"
 #include "System.h"
 #include "EntityImpl.h"
+#include "QueryImpl.h"
 
 namespace ecs
 {
@@ -65,6 +66,7 @@ namespace ecs
         world->markSystemsDirty();
 
         auto sp = world->getUpdate<System>(id);
+        assert(world->has<SystemGroup>(group));
 
         sp->groupId = group;
         return *this;
