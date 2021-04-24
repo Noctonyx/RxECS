@@ -13,7 +13,7 @@ TEST_SUITE("Streams")
         ecs::World world;
 
         auto s = world.getStream<TestComponent2>();
-        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false});
+        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false, 0.f, 0.f});
 
         s = world.getStream<TestComponent3>();
 

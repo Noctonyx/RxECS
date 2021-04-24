@@ -52,7 +52,7 @@ namespace ecs
 
     World::~World()
     {
-        getResults(streamQuery).each<StreamComponent>([this](EntityHandle, StreamComponent * s)
+        getResults(streamQuery).each<StreamComponent>([](EntityHandle, StreamComponent * s)
         {
             //                removeDeferred<StreamComponent>(e.id);
             delete s->ptr;
@@ -363,9 +363,9 @@ namespace ecs
                            aq->inheritamce);
     }
 
-    void World::executeSystemGroup(entity_t pg)
+    void World::executeSystemGroup(entity_t systemGroup)
     {
-        auto gd = getUpdate<SystemGroup>(pg);
+        auto gd = getUpdate<SystemGroup>(systemGroup);
 
         float savedDelta = deltaTime_;
 
@@ -381,9 +381,11 @@ namespace ecs
                     break;
                 }
             }
-            for (auto s: systemOrder[pg]) {
-                if (isAlive(s)) {
-                    if (auto system = get<System>(s); system) {
+            std::vector<systemid_t> & systems = systemOrder[systemGroup];
+
+            for (systemid_t sys: systems) {
+                if (isAlive(sys)) {
+                    if (auto system = get<System>(sys); system) {
                         if (system->query) {
                             auto res = getResults(system->query);
                             system->queryProcessor(res);
@@ -392,7 +394,6 @@ namespace ecs
                         } else {
                             system->executeProcessor(this);
                         }
-                        //executeDeferred();
                     }
                 }
             }

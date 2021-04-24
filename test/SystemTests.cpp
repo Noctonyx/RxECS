@@ -15,7 +15,7 @@ TEST_SUITE("Systems")
 
         uint32_t zz = 0;
 
-        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false});
+        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false, 0.f, 0.f});
 
         auto system = world.createSystem("Basic").withQuery<TestComponent>()
                            .without<TestComponent2>()
@@ -45,7 +45,7 @@ TEST_SUITE("Systems")
         struct Label3 { };
 
         int c = 0;
-        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false});
+        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false, 0.f, 0.f });
 
         world.createSystem("Ordering").withQuery<TestComponent>()
              .label<Label1>()
@@ -93,7 +93,7 @@ TEST_SUITE("Systems")
         world.newEntity().set<TestComponent>({2});
 
         auto sete = world.newEntity().set<ecs::SystemSet>({true});
-        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false});
+        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false, 0.f, 0.f });
 
         uint32_t zz = 0;
 
@@ -124,7 +124,7 @@ TEST_SUITE("Systems")
     {
         ecs::World world;
         world.newEntity().set<TestComponent>({2});
-        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false});
+        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false, 0.f, 0.f });
 
         uint32_t zz = 0;
 
@@ -154,11 +154,11 @@ TEST_SUITE("Systems")
     {
         ecs::World world;
         world.newEntity().set<TestComponent>({2});
-        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false});
+        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false, 0.f, 0.f });
 
         uint32_t zz = 0;
         {
-            auto system = world.createSystem("Execute")
+            world.createSystem("Execute")
                 .inGroup("Group:1")
                 .execute([&zz, &world](ecs::World* w)
                     {
@@ -177,8 +177,8 @@ TEST_SUITE("Systems")
     {
         ecs::World world;
         world.newEntity().set<TestComponent>({ 2 });
-        world.newEntity("Group:1").set<ecs::SystemGroup>({ 2, false });
-        world.newEntity("Group:2").set<ecs::SystemGroup>({ 1, false });
+        world.newEntity("Group:1").set<ecs::SystemGroup>({ 2, false , 0.f, 0.f });
+        world.newEntity("Group:2").set<ecs::SystemGroup>({ 1, false , 0.f, 0.f });
 
         uint32_t zz = 0;
 
@@ -189,7 +189,7 @@ TEST_SUITE("Systems")
                     CHECK(zz == 1);
                     zz++;
                 });
-        auto system2 = world.createSystem("Execute 2")
+        world.createSystem("Execute 2")
             .inGroup("Group:2")
             .execute([&zz](ecs::World*)
                 {
@@ -210,7 +210,7 @@ TEST_SUITE("Systems")
     {
         ecs::World world;
         world.newEntity().set<TestComponent>({ 2 });
-        world.newEntity("Group:1").set<ecs::SystemGroup>({ 2, false });
+        world.newEntity("Group:1").set<ecs::SystemGroup>({ 2, false , 0.f, 0.f });
         world.newEntity("Group:2").set<ecs::SystemGroup>({ 1, true, 0.0f, 0.1f });
 
         uint32_t z1 = 0;
@@ -223,7 +223,7 @@ TEST_SUITE("Systems")
                     CHECK(w->deltaTime() != 0.1f);
                     z1++;
                 });
-        auto system2 = world.createSystem("Execute 2")
+        world.createSystem("Execute 2")
             .inGroup("Group:2")
             .execute([&z2](ecs::World* w)
                 {
