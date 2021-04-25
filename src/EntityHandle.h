@@ -40,6 +40,9 @@ namespace ecs
         template <typename T>
         const T * get(bool inherit = false);
 
+        template <typename U, typename T>
+        const T* getRelated();
+
         template <typename T>
         EntityHandle & remove();
 

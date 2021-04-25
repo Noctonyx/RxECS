@@ -57,6 +57,12 @@ namespace ecs
         return world->get<T>(id, inherit);
     }
 
+    template <typename U, typename T>
+    const T * EntityHandle::getRelated()
+    {
+        return world->getRelated<U, T>(id);
+    }
+
     template <typename T>
     EntityHandle & EntityHandle::remove()
     {
