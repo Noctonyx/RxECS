@@ -40,6 +40,8 @@ namespace ecs
         void removeQueryResult(QueryResult * i);
         void invalidateQueryResults();
 
+        std::string description() const;
+
         uint32_t getEntityRow(entity_t id) const;
         static void moveEntity(World * world,
                                Table * fromTable,

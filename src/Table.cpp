@@ -109,6 +109,21 @@ namespace ecs
         }
     }
 
+    std::string Table::description() const
+    {
+        std::string r = "";
+        for(auto [x, y]: columns) {
+            if(r != "") {
+                r += "|";
+            }
+            r += world->description(x);
+        }
+        if(r == "") {
+            r = "Empty";
+        }
+        return r;
+    }
+
     uint32_t Table::getEntityRow(entity_t id) const
     {
         return world->entities[index(id)].row; // entitiesIndex.at(id);
