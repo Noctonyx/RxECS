@@ -296,6 +296,7 @@ namespace ecs
     template <typename T, typename U>
     const U * World::getRelated(entity_t id)
     {
+        static_assert(std::is_base_of_v<Relation, T>);
         auto g = get<T>(id);
         if (!g) {
             return nullptr;
@@ -389,6 +390,8 @@ namespace ecs
                        });
 
         componentMap.emplace(v, id);
+        if (id > 2)
+            set<Name>(id, {.name = typeid(T).name()});
         return id;
     }
 

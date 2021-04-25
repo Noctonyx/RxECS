@@ -38,6 +38,7 @@ namespace ecs
 
         set(componentBootstrapId, componentBootstrapId, &componentBootstrap);
         set<Name>(getComponentId<Component>(), {.name="Component"});
+        set<Name>(getComponentId<Name>(), {.name="Name"});
 
         // Query to find queries
         queryQuery = createQuery<Query>().id;
@@ -47,7 +48,8 @@ namespace ecs
         systemGroupQuery = createQuery<SystemGroup>().id;
         streamQuery = createQuery<StreamComponent>().id;
 
-        singletonId = newEntity().id;
+        singletonId = newEntity("Singleton").id;
+
     }
 
     World::~World()
