@@ -214,6 +214,8 @@ namespace ecs
         void recalculateSystemOrder();
         void recalculateGroupSystemOrder(entity_t group, std::vector<entity_t> systems);
 
+        static std::string trimName(const char* n);
+
     private:
         std::vector<EntityEntry> entities{};
 
@@ -381,7 +383,7 @@ namespace ecs
 
         component_id_t id = newEntity().id;
         set<Component>(id, {
-                           typeid(T).name(),
+                           World::trimName( typeid(T).name()),
                            sizeof(T), alignof(T),
                            componentConstructor<T>,
                            componentDestructor<T>,
@@ -391,7 +393,7 @@ namespace ecs
 
         componentMap.emplace(v, id);
         if (id > 2)
-            set<Name>(id, {.name = typeid(T).name()});
+            set<Name>(id, {.name = trimName(typeid(T).name())});
         return id;
     }
 

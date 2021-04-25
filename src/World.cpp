@@ -28,7 +28,7 @@ namespace ecs
         auto v = std::type_index(typeid(Component));
         componentMap.emplace(v, componentBootstrapId);
         componentBootstrap = {
-            typeid(Component).name(),
+            trimName(typeid(Component).name()),
             sizeof(Component), alignof(Component),
             componentConstructor<Component>,
             componentDestructor<Component>,
@@ -49,7 +49,6 @@ namespace ecs
         streamQuery = createQuery<StreamComponent>().id;
 
         singletonId = newEntity("Singleton").id;
-
     }
 
     World::~World()
@@ -594,6 +593,19 @@ namespace ecs
             //getUpdate<System>(entity)->dirtyOrder = false;
             toProcess.pop_front();
         }
+    }
+
+    std::string World::trimName(const char * n)
+    {
+        std::string newName = n;
+        if (newName.starts_with("struct ")) {
+            newName = newName.substr(7);
+        }
+        if (newName.starts_with("class ")) {
+            newName = newName.substr(6);
+        }
+
+        return newName;
     }
 
     void World::recalculateSystemOrder()
