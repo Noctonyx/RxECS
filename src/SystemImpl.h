@@ -68,7 +68,7 @@ namespace ecs
         world->markSystemsDirty();
 
         assert(q);
-        qb.withOptional<TArgs ...>();
+        qb.withSingleton<TArgs ... >();
         return *this;
     }
 

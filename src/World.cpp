@@ -344,6 +344,9 @@ namespace ecs
 
     void World::deleteSystem(systemid_t s)
     {
+        if(!isAlive(s)) {
+            return;
+        }
         markSystemsDirty();
 
         auto sys = get<System>(s);
