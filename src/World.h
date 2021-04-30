@@ -376,6 +376,8 @@ namespace ecs
         static_assert(std::is_default_constructible<T>(), "Cannot be a component");
         // static_assert(std::is_standard_layout<T>(), "Cannot be a component");
 
+        constexpr bool is_relation = std::is_base_of<Relation, T>();
+
         auto v = std::type_index(typeid(T));
         if (componentMap.find(v) != componentMap.end()) {
             return componentMap[v];
@@ -388,7 +390,8 @@ namespace ecs
                            componentConstructor<T>,
                            componentDestructor<T>,
                            componentCopy<T>,
-                           componentMove<T>
+                           componentMove<T>,
+                           is_relation
                        });
 
         componentMap.emplace(v, id);

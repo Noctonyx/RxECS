@@ -33,7 +33,8 @@ namespace ecs
             componentConstructor<Component>,
             componentDestructor<Component>,
             componentCopy<Component>,
-            componentMove<Component>
+            componentMove<Component>,
+            false
         };
 
         set(componentBootstrapId, componentBootstrapId, &componentBootstrap);

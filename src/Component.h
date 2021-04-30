@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <string>
 #include <string_view>
 #include <functional>
 #include <span>
@@ -19,6 +20,8 @@ namespace ecs
         std::function<void(void *, size_t, uint32_t)> componentDestructor;
         std::function<void(const void *, void *, size_t, uint32_t)> componentCopier;
         std::function<void(void *, void *, size_t, uint32_t)> componentMover;
+
+        bool isRelation;
     };
 
     template <typename T>
