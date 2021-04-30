@@ -170,6 +170,7 @@ namespace ecs
     void Table::copyEntity(World * world,
         Table * fromTable,
         Table * toTable,
+     
         entity_t id,
         entity_t newEntity,
         const ArchetypeTransition & trans)

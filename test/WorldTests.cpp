@@ -278,6 +278,21 @@ TEST_SUITE("World")
             CHECK(j.get<Bloat>()->a == 11);
             CHECK(j.get<BloatWith>()->entity == prefabBoss.id);
         }
+        SUBCASE("Instantiate should remove name") {
+            world.set<ecs::Name>(prefab.id, { std::string{"abcd"} });
+            auto i = world.instantiate(prefab.id);
+            CHECK(i.has<Bloat>());
+            CHECK(!i.has<ecs::Name>());
+            CHECK(i.has<BloatWith>());
+            CHECK(i.get<Bloat>()->a == 11);
+            CHECK(i.get<BloatWith>()->entity == prefabBoss.id);
+
+            auto j = world.instantiate(prefab.id);
+            CHECK(j.has<Bloat>());
+            CHECK(j.has<BloatWith>());
+            CHECK(j.get<Bloat>()->a == 11);
+            CHECK(j.get<BloatWith>()->entity == prefabBoss.id);
+        }
         SUBCASE("Prefabs not in Query 1") {
             auto q = world.createQuery<Bloat>().id;
 

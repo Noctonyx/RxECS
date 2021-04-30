@@ -26,6 +26,9 @@ namespace ecs
         template<class ... TArgs>
         SystemBuilder& without();
 
+        template<class ... TArgs>
+        SystemBuilder& with();
+
         template <class T, class ... U>
         SystemBuilder& withRelation();
 

@@ -42,6 +42,17 @@ namespace ecs
         return *this;
     }
 
+    template <class ... TArgs>
+    SystemBuilder & SystemBuilder::with()
+    {
+        world->markSystemsDirty();
+
+        assert(q);
+        qb.with<TArgs...>();
+
+        return *this;
+    }
+
     template <class T, class ... U>
     SystemBuilder& SystemBuilder::withRelation()
     {

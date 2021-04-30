@@ -21,6 +21,19 @@ namespace ecs
         return *this;
     }
 
+    template <class ... TArgs>
+    QueryBuilder & QueryBuilder::with()
+    {
+        std::vector<component_id_t> with = { world->getComponentId<TArgs>()... };
+        auto qp = world->getUpdate<Query>(id);
+        for (auto w : with) {
+            qp->with.insert(w);
+        }
+        qp->recalculateQuery(world);
+
+        return *this;
+    }
+
     template <class T, class ... U>
     QueryBuilder & QueryBuilder::withRelation()
     {

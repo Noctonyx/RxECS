@@ -13,6 +13,9 @@ namespace ecs
         template <class ... TArgs>
         QueryBuilder & without();
 
+        template <class ... TArgs>
+        QueryBuilder& with();
+
         template <class T, class ... U>
         QueryBuilder & withRelation();
 

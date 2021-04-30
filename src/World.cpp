@@ -101,9 +101,15 @@ namespace ecs
     EntityHandle World::instantiate(entity_t prefab)
     {
         const auto prefabAt = getEntityArchetype(prefab);
-        auto trans = am.removeComponentFromArchetype(prefabAt, getComponentId<Prefab>());
+        auto trans = am.startTransition(prefabAt);
+
+        am.removeComponentFromArchetype(getComponentId<Prefab>(), trans);
+        if (has<Name>(prefab)) {
+            am.removeComponentFromArchetype(getComponentId<Name>(), trans);
+        }
 
         auto e = newEntity();
+        tables[getEntityArchetype(e.id)]->removeEntity(e.id);
 
         ensureTableForArchetype(trans.to_at);
         Table::copyEntity(this, tables[prefabAt], tables[trans.to_at], prefab, e.id, trans);
@@ -170,9 +176,11 @@ namespace ecs
     void World::add(const entity_t id, const component_id_t componentId)
     {
         const auto at = getEntityArchetype(id);
-        const auto & newAt = am.addComponentToArchetype(at, componentId);
+        auto trans = am.startTransition(at);
 
-        moveEntity(id, at, newAt);
+        am.addComponentToArchetype(componentId, trans);
+
+        moveEntity(id, at, trans);
     }
 
     void World::addDeferred(const entity_t id, const component_id_t componentId)
@@ -196,8 +204,9 @@ namespace ecs
         }
 
         const auto at = getEntityArchetype(id);
-        const auto & newAt = am.removeComponentFromArchetype(at, componentId);
-        moveEntity(id, at, newAt);
+        auto trans = am.startTransition(at);
+        am.removeComponentFromArchetype(componentId, trans);
+        moveEntity(id, at, trans);
     }
 
     void World::removeDeferred(entity_t id, component_id_t componentId)
@@ -345,7 +354,7 @@ namespace ecs
 
     void World::deleteSystem(systemid_t s)
     {
-        if(!isAlive(s)) {
+        if (!isAlive(s)) {
             return;
         }
         markSystemsDirty();
@@ -469,7 +478,7 @@ namespace ecs
         if (n) {
             return n->name;
         }
-        std::string nm = "Entity#" + std::to_string(index(id)) + ":" + std::to_string(
+        std::string nm = "Entity " + std::to_string(index(id)) + ":" + std::to_string(
             version(id));
         return nm;
     }

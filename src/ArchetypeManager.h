@@ -1,6 +1,7 @@
 #pragma once
 #include <set>
 #include <vector>
+#include <cassert>
 
 #include "Entity.h"
 #include "Hasher.h"
@@ -72,90 +73,119 @@ namespace ecs
             archetypes.push_back(e);
         }
 
-        ArchetypeTransition & addComponentToArchetype(uint16_t at, component_id_t componentId)
+        ArchetypeTransition startTransition(uint16_t at)
         {
-            if (!addCache.contains({ at, componentId })) {
-
-                ArchetypeTransition trans;
-                trans.from_at = at;
-
-                auto oldAt = archetypes[at];
-                Archetype newA = oldAt;
-                newA.components.insert(componentId);
-                Hasher h;
-                for (auto& v : newA.components) {
-                    h.u64(v);
-                }
-
-                uint16_t newId;
-
-                newA.hash_value = h.get();
-                if (archetypeMap.contains(newA.hash_value)) {
-                    newId = archetypeMap[newA.hash_value];
-                }
-                else {
-
-                    auto ix = static_cast<uint16_t>(archetypes.size());
-                    newA.id = ix;
-                    //emptyArchetype = ix;
-                    archetypeMap.emplace(newA.hash_value, ix);
-                    archetypes.push_back(newA);
-
-                    newId = ix;
-                }
-                trans.to_at = newId;
-                trans.addComponents.push_back(componentId);
-                trans.preserveComponents.resize(oldAt.components.size());
-                std::copy(oldAt.components.begin(), oldAt.components.end(),
-                          trans.preserveComponents.begin());
-
-                addCache.insert_or_assign({ at, componentId }, std::move(trans));
+            ArchetypeTransition trans;
+            trans.from_at = at;
+            trans.to_at = at;
+            auto a = archetypes[at];
+            for (auto s: a.components) {
+                trans.preserveComponents.push_back(s);
             }
-            return addCache[{at, componentId}];
+
+            return trans;
         }
 
-        ArchetypeTransition & removeComponentFromArchetype(uint16_t at, component_id_t componentId)
+        void createRemoveCache(uint16_t at, component_id_t componentId)
         {
-            if (!removeCache.contains({at, componentId})) {
+            auto old_archetype = archetypes[at];
+            Archetype new_archetype = old_archetype;
 
-                ArchetypeTransition trans;
-                trans.from_at = at;
+            assert(new_archetype.components.find(componentId) != new_archetype.components.end());
 
-                auto old_archetype = archetypes[at];
-                Archetype new_archetype = old_archetype;
-                new_archetype.components.erase(componentId);
-                Hasher h;
-                for (auto & v: new_archetype.components) {
-                    h.u64(v);
-                }
-                new_archetype.hash_value = h.get();
+            new_archetype.components.erase(componentId);
+            Hasher h;
+            for (auto & v: new_archetype.components) {
+                h.u64(v);
+            }
+            new_archetype.hash_value = h.get();
 
-                uint16_t newid;
+            uint16_t newid;
 
-                if (archetypeMap.find(new_archetype.hash_value) != archetypeMap.end()) {
-                    newid = archetypeMap[new_archetype.hash_value];
-                    trans.to_at = newid;
-                } else {
-                    auto ix = static_cast<uint16_t>(archetypes.size());
-                    //emptyArchetype = ix;
-                    archetypeMap.emplace(new_archetype.hash_value, ix);
-                    new_archetype.id = ix;
-                    archetypes.push_back(new_archetype);
+            if (archetypeMap.find(new_archetype.hash_value) != archetypeMap.end()) {
+                newid = archetypeMap[new_archetype.hash_value];
+            } else {
+                auto ix = static_cast<uint16_t>(archetypes.size());
+                archetypeMap.emplace(new_archetype.hash_value, ix);
+                new_archetype.id = ix;
+                archetypes.push_back(new_archetype);
 
-                    //removeCache.insert_or_assign({at, componentId}, ix);
-
-                    newid = ix;
-                }
-                trans.to_at = newid;
-                trans.removeComponents.push_back(componentId);
-                trans.preserveComponents.resize(new_archetype.components.size());
-                std::copy(new_archetype.components.begin(), new_archetype.components.end(),
-                          trans.preserveComponents.begin());
-
-                removeCache.insert_or_assign({at, componentId}, std::move(trans));
+                newid = ix;
             }
 
-            return removeCache[{at, componentId}];
+            removeCache.insert_or_assign({at, componentId}, newid);
+        }
+
+        void createAddCache(uint16_t at, component_id_t componentId)
+        {
+            auto oldAt = archetypes[at];
+            Archetype newA = oldAt;
+            newA.components.insert(componentId);
+            Hasher h;
+            for (auto& v : newA.components) {
+                h.u64(v);
+            }
+
+            uint16_t newId;
+
+            newA.hash_value = h.get();
+            if (archetypeMap.contains(newA.hash_value)) {
+                newId = archetypeMap[newA.hash_value];
+            }
+            else {
+
+                auto ix = static_cast<uint16_t>(archetypes.size());
+                newA.id = ix;
+                //emptyArchetype = ix;
+                archetypeMap.emplace(newA.hash_value, ix);
+                archetypes.push_back(newA);
+
+                newId = ix;
+            }
+
+            addCache.insert_or_assign({ at, componentId }, newId);
+        }
+
+        void removeComponentFromArchetype(component_id_t componentId, ArchetypeTransition & trans)
+        {
+            if (!removeCache.contains({trans.to_at, componentId})) {
+
+                createRemoveCache(trans.to_at, componentId);
+            }
+
+            trans.to_at = removeCache[{trans.to_at, componentId}];
+
+            auto j = std::find(trans.preserveComponents.begin(), trans.preserveComponents.end(), componentId);
+
+            if (j != trans.preserveComponents.end()) {
+                trans.preserveComponents.erase(j);
+                trans.removeComponents.push_back(componentId);
+            } else {
+                auto k = std::find(trans.addComponents.begin(), trans.addComponents.end(), componentId);
+                assert(k != trans.addComponents.end());
+                trans.addComponents.erase(k);
+            }
+        }
+
+        void addComponentToArchetype(component_id_t componentId, ArchetypeTransition& trans)
+        {
+            if (!addCache.contains({ trans.to_at, componentId })) {
+
+                createAddCache(trans.to_at, componentId);
+            }
+
+            trans.to_at = addCache[{trans.to_at, componentId}];
+
+            auto j = std::find(trans.removeComponents.begin(), trans.removeComponents.end(), componentId);
+
+            if (j != trans.removeComponents.end()) {
+                trans.removeComponents.erase(j);
+            }
+            else {
+                auto k = std::find(trans.preserveComponents.begin(), trans.preserveComponents.end(), componentId);
+                assert(k == trans.preserveComponents.end());
+                trans.addComponents.push_back(componentId);
+            }
         }
 
         Archetype & getArchetypeDetails(uint16_t id)
@@ -166,10 +196,8 @@ namespace ecs
         std::vector<Archetype> archetypes{};
         robin_hood::unordered_map<Hash, uint16_t> archetypeMap;
 
-        robin_hood::unordered_map<robin_hood::pair<uint16_t, component_id_t>, ArchetypeTransition>
-        addCache;
-        robin_hood::unordered_map<robin_hood::pair<uint16_t, component_id_t>, ArchetypeTransition>
-        removeCache;
+        robin_hood::unordered_map<robin_hood::pair<uint16_t, component_id_t>, uint16_t> addCache;
+        robin_hood::unordered_map<robin_hood::pair<uint16_t, component_id_t>, uint16_t> removeCache;
 
         uint16_t emptyArchetype;
     };

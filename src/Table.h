@@ -52,6 +52,7 @@ namespace ecs
         static void copyEntity(World * world,
                                Table * fromTable,
                                Table * toTable,
+                               //Table * existingTable,
                                entity_t id,
                                entity_t newEntity,
                                const ArchetypeTransition & trans);
