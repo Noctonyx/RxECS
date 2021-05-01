@@ -183,6 +183,7 @@ namespace ecs
             }
             else {
                 auto k = std::find(trans.preserveComponents.begin(), trans.preserveComponents.end(), componentId);
+                (void)k;
                 assert(k == trans.preserveComponents.end());
                 trans.addComponents.push_back(componentId);
             }

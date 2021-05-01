@@ -48,18 +48,18 @@ namespace ecs
         systemQuery = createQuery<System>().withRelation<SetForSystem, SystemSet>().id;
         systemGroupQuery = createQuery<SystemGroup>().id;
         streamQuery = createQuery<StreamComponent>().id;
-
-        singletonId = newEntity("Singleton").id;
     }
 
     World::~World()
     {
         getResults(streamQuery).each<StreamComponent>([](EntityHandle, StreamComponent * s)
         {
-            //                removeDeferred<StreamComponent>(e.id);
             delete s->ptr;
         });
-        //      executeDeferred();
+
+        for (auto& [k, v] : singletons) {
+            delete[] static_cast<char*>(v);
+        }
 
         for (auto & [k, v]: tables) {
             delete v;
@@ -275,33 +275,63 @@ namespace ecs
 
     void World::addSingleton(component_id_t componentId)
     {
-        add(singletonId, componentId);
+        if(hasSingleton(componentId)) {
+            return;
+        }
+        auto cd = getComponentDetails(componentId);
+        char* cp = new char[cd->size];
+        cd->componentConstructor(cp, cd->size, 1);
+        singletons[componentId] = cp;
     }
 
     bool World::hasSingleton(component_id_t componentId)
     {
-        auto at = getEntityArchetype(singletonId);
-        return am.archetypes[at].components.find(componentId) != am.archetypes[at].components.end();
+        if(singletons.contains(componentId)) {
+            return true;
+        }
+        return false;
     }
 
     void World::removeSingleton(component_id_t componentId)
     {
-        remove(singletonId, componentId);
+        if(!hasSingleton(componentId)) {
+            return;
+        }
+
+        auto cd = getComponentDetails(componentId);
+        auto ptr = singletons[componentId];
+
+        cd->componentDestructor(ptr, cd->size, 1);
+
+        delete[] static_cast<char*>(ptr);
+
+        singletons.erase(componentId);
     }
 
     void World::setSingleton(component_id_t componentId, const void * ptr)
     {
-        set(singletonId, componentId, ptr);
+        addSingleton(componentId);
+
+        auto cd = getComponentDetails(componentId);
+        auto p = singletons[componentId];
+
+        cd->componentCopier(ptr, p, cd->size, 1);
     }
 
     const void * World::getSingleton(component_id_t componentId)
     {
-        return get(singletonId, componentId);
+        if (!hasSingleton(componentId)) {
+            return nullptr;
+        }
+        return singletons[componentId];
     }
 
     void * World::getSingletonUpdate(component_id_t componentId)
     {
-        return getUpdate(singletonId, componentId);
+        if(!hasSingleton(componentId)) {
+            return nullptr;
+        }
+        return singletons[componentId];
     }
 
     Stream * World::getStream(component_id_t id)

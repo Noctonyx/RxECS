@@ -235,14 +235,14 @@ namespace ecs
         queryid_t queryQuery = 0;
         queryid_t streamQuery = 0;
 
-        entity_t singletonId;
-
         std::vector<DeferredCommand> deferredCommands;
 
         std::vector<entity_t> pipelineGroupSequence;
         std::unordered_map<entity_t, std::vector<entity_t>> systemOrder;
         //std::vector<entity_t> systemOrder{};
         robin_hood::unordered_map<std::string, entity_t> nameIndex{};
+
+        std::unordered_map<component_id_t, void*> singletons;
 
         bool systemOrderDirty = true;
 
