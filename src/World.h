@@ -133,7 +133,7 @@ namespace ecs
 
         template <typename T>
         bool hasSingleton();
-        bool hasSingleton(component_id_t componentId);
+        bool hasSingleton(component_id_t componentId) const;
 
         template <typename T>
         void removeSingleton();
@@ -154,13 +154,6 @@ namespace ecs
         template <typename T>
         Stream * getStream();
         Stream * getStream(component_id_t id);
-
-        //        template <typename T>
-        //      streamid_t createStream();
-        //    streamid_t createStream(component_id_t id);
-
-        //        void deleteStream(streamid_t id);
-        //      Stream * getStream(streamid_t id);    
 
         const Component * getComponentDetails(component_id_t id);
 
@@ -242,7 +235,7 @@ namespace ecs
         //std::vector<entity_t> systemOrder{};
         robin_hood::unordered_map<std::string, entity_t> nameIndex{};
 
-        std::unordered_map<component_id_t, void*> singletons;
+        robin_hood::unordered_map<component_id_t, void*> singletons;
 
         bool systemOrderDirty = true;
 

@@ -273,7 +273,7 @@ namespace ecs
         deferredCommands.push_back({DeferredCommandType::Set, id, componentId, ptr});
     }
 
-    void World::addSingleton(component_id_t componentId)
+    void World::addSingleton(const component_id_t componentId)
     {
         if(hasSingleton(componentId)) {
             return;
@@ -284,7 +284,7 @@ namespace ecs
         singletons[componentId] = cp;
     }
 
-    bool World::hasSingleton(component_id_t componentId)
+    bool World::hasSingleton(const component_id_t componentId) const
     {
         if(singletons.contains(componentId)) {
             return true;
@@ -292,7 +292,7 @@ namespace ecs
         return false;
     }
 
-    void World::removeSingleton(component_id_t componentId)
+    void World::removeSingleton(const component_id_t componentId)
     {
         if(!hasSingleton(componentId)) {
             return;
@@ -308,17 +308,17 @@ namespace ecs
         singletons.erase(componentId);
     }
 
-    void World::setSingleton(component_id_t componentId, const void * ptr)
+    void World::setSingleton(const component_id_t componentId, const void * ptr)
     {
         addSingleton(componentId);
 
-        auto cd = getComponentDetails(componentId);
-        auto p = singletons[componentId];
+        const auto cd = getComponentDetails(componentId);
+        const auto p = singletons[componentId];
 
         cd->componentCopier(ptr, p, cd->size, 1);
     }
 
-    const void * World::getSingleton(component_id_t componentId)
+    const void * World::getSingleton(const component_id_t componentId)
     {
         if (!hasSingleton(componentId)) {
             return nullptr;
@@ -326,7 +326,7 @@ namespace ecs
         return singletons[componentId];
     }
 
-    void * World::getSingletonUpdate(component_id_t componentId)
+    void * World::getSingletonUpdate(const component_id_t componentId)
     {
         if(!hasSingleton(componentId)) {
             return nullptr;
