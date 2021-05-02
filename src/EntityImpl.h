@@ -19,6 +19,13 @@ namespace ecs
     }
 
     template <typename T>
+    T * EntityHandle::addAndUpdate()
+    {
+        world->add<T>(id);
+        return world->getUpdate<T>(id);
+    }
+
+    template <typename T>
     EntityHandle & EntityHandle::addDeferred()
     {
         world->addDeferred<T>(id);

@@ -21,6 +21,9 @@ namespace ecs
         EntityHandle & add();
 
         template <typename T>
+        T * addAndUpdate();
+
+        template <typename T>
         EntityHandle & addDeferred();
 
         template <typename T>

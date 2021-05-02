@@ -244,6 +244,8 @@ namespace ecs
             return nullptr;
         }
 
+        assert(has(id, componentId));
+
         auto at = getEntityArchetype(id);
         auto table = tables[at];
 
