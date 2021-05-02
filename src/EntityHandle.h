@@ -49,6 +49,8 @@ namespace ecs
         bool isAlive() const;
         EntityHandle & destroy();
 
+        EntityHandle instantiate(const char * name = nullptr);
+
         EntityHandle getHandle(entity_t o)
         {
             return EntityHandle{o, world};

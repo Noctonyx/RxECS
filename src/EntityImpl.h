@@ -5,7 +5,7 @@
 namespace ecs
 {
     template <typename T>
-    EntityHandle& EntityHandle::set(const T& v)
+    EntityHandle & EntityHandle::set(const T & v)
     {
         world->set<T>(id, v);
         return *this;
@@ -85,5 +85,17 @@ namespace ecs
     {
         world->destroy(id);
         return *this;
+    }
+
+    inline EntityHandle EntityHandle::instantiate(const char * name)
+    {
+        assert(isAlive());
+        assert(has<Prefab>());
+
+        auto e = EntityHandle{world->instantiate(id).id, world};
+        if (name) {
+            e.set<Name>({name});
+        }
+        return e;
     }
 }
