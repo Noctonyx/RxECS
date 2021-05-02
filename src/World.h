@@ -207,7 +207,7 @@ namespace ecs
         void recalculateSystemOrder();
         void recalculateGroupSystemOrder(entity_t group, std::vector<entity_t> systems);
 
-        static std::string trimName(const char* n);
+        static std::string trimName(const char * n);
 
     private:
         std::vector<EntityEntry> entities{};
@@ -235,7 +235,7 @@ namespace ecs
         //std::vector<entity_t> systemOrder{};
         robin_hood::unordered_map<std::string, entity_t> nameIndex{};
 
-        robin_hood::unordered_map<component_id_t, void*> singletons;
+        robin_hood::unordered_map<component_id_t, void *> singletons;
 
         bool systemOrderDirty = true;
 
@@ -351,7 +351,7 @@ namespace ecs
     template <typename T>
     T * World::getSingletonUpdate()
     {
-        return getSingletonUpdate(getComponentId<T>());
+        return static_cast<T *>(getSingletonUpdate(getComponentId<T>()));
     }
 
     template <typename T>
@@ -378,7 +378,7 @@ namespace ecs
 
         component_id_t id = newEntity().id;
         set<Component>(id, {
-                           World::trimName( typeid(T).name()),
+                           World::trimName(typeid(T).name()),
                            sizeof(T), alignof(T),
                            componentConstructor<T>,
                            componentDestructor<T>,
