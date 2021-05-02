@@ -52,6 +52,28 @@ namespace ecs
         }
     };
 
+    struct SingletonIterator
+    {
+        World* world;
+        std::vector<component_id_t>::iterator it;
+
+        SingletonIterator& operator++()
+        {
+            it++;
+            return *this;
+        }
+
+        bool operator!=(const SingletonIterator& other) const
+        {
+            return it != other.it;
+        }
+
+        component_id_t operator*()
+        {
+            return *it;
+        }
+    };
+
     enum class DeferredCommandType: uint8_t
     {
         Destroy,
@@ -176,6 +198,11 @@ namespace ecs
 
         WorldIterator begin();
         WorldIterator end();
+
+        robin_hood::unordered_map<component_id_t, void*> & allSingletons()
+        {
+            return singletons;
+        }
 
         Table * getTableForArchetype(uint16_t t)
         {
