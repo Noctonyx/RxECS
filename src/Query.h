@@ -25,7 +25,8 @@ namespace ecs
             std::vector<component_id_t> without_overlap;
 
             std::ranges::set_intersection(ad.components, with, std::back_inserter(with_overlap));
-            if (with_overlap.empty()) {
+
+            if (with_overlap.size() < with.size()) {
                 return false;
             }
 

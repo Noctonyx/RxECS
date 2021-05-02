@@ -45,7 +45,6 @@ namespace ecs
         auto qp = world->getUpdate<Query>(id);
 
         qp->relations.insert({relative, targets});
-        qp->with.insert(relative);
 
         return *this;
     }
