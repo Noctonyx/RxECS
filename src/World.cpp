@@ -58,6 +58,8 @@ namespace ecs
         });
 
         for (auto& [k, v] : singletons) {
+            auto cd = getComponentDetails(k);
+            cd->componentDestructor(v, cd->size, 1);
             delete[] static_cast<char*>(v);
         }
 
