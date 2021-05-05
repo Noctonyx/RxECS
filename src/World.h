@@ -138,6 +138,9 @@ namespace ecs
         template <typename T, typename U>
         const U * getRelated(entity_t id);
 
+        template <typename T>
+        EntityHandle getRelatedEntity(entity_t id);
+
         const void * get(entity_t id, component_id_t componentId, bool inherited = false);
         void * getUpdate(entity_t id, component_id_t componentId);
 
@@ -328,6 +331,18 @@ namespace ecs
     }
 
     template <typename T>
+    EntityHandle World::getRelatedEntity(entity_t id)
+    {
+        static_assert(std::is_base_of_v<Relation, T>);
+        auto g = get<T>(id);
+        if (!g) {
+            return EntityHandle{0, this};
+        }
+
+        return EntityHandle{g->entity, this};
+    }
+
+    template <typename T>
     void World::set(entity_t id, const T & value)
     {
         set(id, getComponentId<T>(), &value);
@@ -341,8 +356,8 @@ namespace ecs
         auto cd = getComponentDetails(c);
         char * cp = new char[cd->size];
 
-        T * p = new(cp) T(std::move(value));
-        setDeferred(id, getComponentId<T>(), p);
+        std::remove_reference_t<T> * p = new(cp) std::remove_reference_t<T>(std::move(value));
+        setDeferred(id, getComponentId<std::remove_reference_t<T>>(), p);
     }
 
     template <typename T>
@@ -390,33 +405,33 @@ namespace ecs
     template <typename T>
     component_id_t World::getComponentId()
     {
-        static_assert(std::is_copy_constructible<T>(), "Cannot be a component");
+        static_assert(std::is_copy_constructible<std::remove_reference_t<T>>(), "Cannot be a component");
         //static_assert(std::is_trivially_copyable<T>(), "Cannot be a component");
-        static_assert(std::is_move_constructible<T>(), "Cannot be a component");
-        static_assert(std::is_default_constructible<T>(), "Cannot be a component");
+        static_assert(std::is_move_constructible<std::remove_reference_t<T>>(), "Cannot be a component");
+        static_assert(std::is_default_constructible<std::remove_reference_t<T>>(), "Cannot be a component");
         // static_assert(std::is_standard_layout<T>(), "Cannot be a component");
 
-        constexpr bool is_relation = std::is_base_of<Relation, T>();
+        constexpr bool is_relation = std::is_base_of<Relation, std::remove_reference_t<T>>();
 
-        auto v = std::type_index(typeid(T));
+        auto v = std::type_index(typeid(std::remove_reference_t<T>));
         if (componentMap.find(v) != componentMap.end()) {
             return componentMap[v];
         }
 
         component_id_t id = newEntity().id;
         set<Component>(id, {
-                           World::trimName(typeid(T).name()),
-                           sizeof(T), alignof(T),
-                           componentConstructor<T>,
-                           componentDestructor<T>,
-                           componentCopy<T>,
-                           componentMove<T>,
+                           World::trimName(typeid(std::remove_reference_t<T>).name()),
+                           sizeof(std::remove_reference_t<T>), alignof(std::remove_reference_t<T>),
+                           componentConstructor<std::remove_reference_t<T>>,
+                           componentDestructor<std::remove_reference_t<T>>,
+                           componentCopy<std::remove_reference_t<T>>,
+                           componentMove<std::remove_reference_t<T>>,
                            is_relation
                        });
 
         componentMap.emplace(v, id);
         if (id > 2)
-            set<Name>(id, {.name = trimName(typeid(T).name())});
+            set<Name>(id, {.name = trimName(typeid(std::remove_reference_t<T>).name())});
         return id;
     }
 

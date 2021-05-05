@@ -200,6 +200,9 @@ namespace ecs
 
     void World::remove(entity_t id, component_id_t componentId)
     {
+        if(!has(id, componentId)) {
+            return;
+        }
         if (componentId == getComponentId<Name>()) {
             auto np = get<Name>(id);
             nameIndex.erase(np->name);
@@ -244,7 +247,9 @@ namespace ecs
             return nullptr;
         }
 
-        assert(has(id, componentId));
+        if(!has(id, componentId)) {
+            return  nullptr;
+        }
 
         auto at = getEntityArchetype(id);
         auto table = tables[at];

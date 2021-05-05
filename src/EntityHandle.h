@@ -3,7 +3,6 @@
 
 #include "ComponentIterator.h"
 #include "Entity.h"
-//#include "World.h"
 
 namespace ecs
 {
@@ -47,6 +46,9 @@ namespace ecs
         const T* getRelated();
 
         template <typename T>
+        EntityHandle getRelatedEntity();
+
+        template <typename T>
         EntityHandle & remove();
 
         bool isAlive() const;
@@ -68,6 +70,9 @@ namespace ecs
         {
             return world;
         }
+
+        operator bool() const;
+        operator entity_t() const;
 
         std::string description() const;
 

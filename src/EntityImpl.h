@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EntityHandle.h"
+#include "World.h"
 
 namespace ecs
 {
@@ -42,10 +43,10 @@ namespace ecs
     template <typename T>
     EntityHandle & EntityHandle::setDeferred(T && value)
     {
-        world->setDeferred<T>(id, std::move(value));
+        world->setDeferred<T>(id, std::forward<T>(value));
         return *this;
     }
-
+    
     template <typename T>
     bool EntityHandle::has()
     {
@@ -68,6 +69,12 @@ namespace ecs
     const T * EntityHandle::getRelated()
     {
         return world->getRelated<U, T>(id);
+    }
+
+    template <typename T>
+    EntityHandle EntityHandle::getRelatedEntity()
+    {
+        return world->getRelatedEntity<T>(id);
     }
 
     template <typename T>

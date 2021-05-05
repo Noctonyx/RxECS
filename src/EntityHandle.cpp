@@ -3,6 +3,16 @@
 
 namespace ecs
 {
+    EntityHandle::operator bool() const
+    {
+        return world->isAlive(id);
+    }
+
+    EntityHandle::operator unsigned long long() const
+    {
+        return id;
+    }
+
     std::string EntityHandle::description() const
     {
         return world->description(id);
