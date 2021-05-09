@@ -31,7 +31,7 @@ namespace ecs
         EntityHandle & destroyDeferred();
 
         template <typename T>
-        EntityHandle & setDeferred(T && value);
+        EntityHandle & setDeferred(const T & value);
 
         template <typename T>
         bool has();
@@ -43,7 +43,7 @@ namespace ecs
         const T * get(bool inherit = false);
 
         template <typename U, typename T>
-        const T* getRelated();
+        const T * getRelated();
 
         template <typename T>
         EntityHandle getRelatedEntity();

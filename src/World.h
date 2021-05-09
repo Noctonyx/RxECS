@@ -54,16 +54,16 @@ namespace ecs
 
     struct SingletonIterator
     {
-        World* world;
+        World * world;
         std::vector<component_id_t>::iterator it;
 
-        SingletonIterator& operator++()
+        SingletonIterator & operator++()
         {
             it++;
             return *this;
         }
 
-        bool operator!=(const SingletonIterator& other) const
+        bool operator!=(const SingletonIterator & other) const
         {
             return it != other.it;
         }
@@ -149,7 +149,7 @@ namespace ecs
         void set(entity_t id, component_id_t componentId, const void * ptr);
 
         template <typename T>
-        void setDeferred(entity_t id, T && value);
+        void setDeferred(entity_t id, const T & value);
         void setDeferred(entity_t id, component_id_t componentId, void * ptr);
 
         template <typename T>
@@ -202,7 +202,7 @@ namespace ecs
         WorldIterator begin();
         WorldIterator end();
 
-        robin_hood::unordered_map<component_id_t, void*> & allSingletons()
+        robin_hood::unordered_map<component_id_t, void *> & allSingletons()
         {
             return singletons;
         }
@@ -349,15 +349,15 @@ namespace ecs
     }
 
     template <typename T>
-    void World::setDeferred(entity_t id, T && value)
+    void World::setDeferred(entity_t id, const T & value)
     {
         auto c = getComponentId<T>();
 
         auto cd = getComponentDetails(c);
         char * cp = new char[cd->size];
 
-        std::remove_reference_t<T> * p = new(cp) std::remove_reference_t<T>(std::move(value));
-        setDeferred(id, getComponentId<std::remove_reference_t<T>>(), p);
+        T * p = new(cp) T(value);
+        setDeferred(id, getComponentId<T>(), p);
     }
 
     template <typename T>
@@ -405,10 +405,13 @@ namespace ecs
     template <typename T>
     component_id_t World::getComponentId()
     {
-        static_assert(std::is_copy_constructible<std::remove_reference_t<T>>(), "Cannot be a component");
+        static_assert(std::is_copy_constructible<std::remove_reference_t<T>>(),
+            "Cannot be a component");
         //static_assert(std::is_trivially_copyable<T>(), "Cannot be a component");
-        static_assert(std::is_move_constructible<std::remove_reference_t<T>>(), "Cannot be a component");
-        static_assert(std::is_default_constructible<std::remove_reference_t<T>>(), "Cannot be a component");
+        static_assert(std::is_move_constructible<std::remove_reference_t<T>>(),
+            "Cannot be a component");
+        static_assert(std::is_default_constructible<std::remove_reference_t<T>>(),
+            "Cannot be a component");
         // static_assert(std::is_standard_layout<T>(), "Cannot be a component");
 
         constexpr bool is_relation = std::is_base_of<Relation, std::remove_reference_t<T>>();

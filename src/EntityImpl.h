@@ -41,9 +41,9 @@ namespace ecs
     }
 
     template <typename T>
-    EntityHandle & EntityHandle::setDeferred(T && value)
+    EntityHandle& EntityHandle::setDeferred(const T& value)
     {
-        world->setDeferred<T>(id, std::forward<T>(value));
+        world->setDeferred<T>(id, value);
         return *this;
     }
     
