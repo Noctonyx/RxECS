@@ -1,4 +1,6 @@
 #pragma once
+#include <unordered_set>
+
 #include "Entity.h"
 #include "QueryResult.h"
 //#include "QueryResult.h"
@@ -65,6 +67,9 @@ namespace ecs
         std::set<entity_t> labels;
         std::set<entity_t> befores;
         std::set<entity_t> afters;
+
+        std::unordered_set<component_id_t> reads;
+        std::unordered_set<component_id_t> writes;
 
         entity_t groupId = 0;
 

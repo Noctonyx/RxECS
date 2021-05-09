@@ -416,6 +416,22 @@ namespace ecs
                            aq->inheritamce);
     }
 
+    void World::executeSystem(systemid_t sys)
+    {
+        if (isAlive(sys)) {
+            if (auto system = get<System>(sys); system) {
+                if (system->query) {
+                    auto res = getResults(system->query);
+                    system->queryProcessor(res);
+                } else if (system->stream) {
+                    system->streamProcessor(getStream(system->stream));
+                } else {
+                    system->executeProcessor(this);
+                }
+            }
+        }
+    }
+
     void World::executeSystemGroup(entity_t systemGroup)
     {
         auto gd = getUpdate<SystemGroup>(systemGroup);
@@ -437,18 +453,7 @@ namespace ecs
             std::vector<systemid_t> & systems = systemOrder[systemGroup];
 
             for (systemid_t sys: systems) {
-                if (isAlive(sys)) {
-                    if (auto system = get<System>(sys); system) {
-                        if (system->query) {
-                            auto res = getResults(system->query);
-                            system->queryProcessor(res);
-                        } else if (system->stream) {
-                            system->streamProcessor(getStream(system->stream));
-                        } else {
-                            system->executeProcessor(this);
-                        }
-                    }
-                }
+                executeSystem(sys);
             }
         } while (gd->fixed && gd->delta >= gd->rate);
 

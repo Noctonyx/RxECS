@@ -195,6 +195,7 @@ namespace ecs
         void deleteQuery(queryid_t q);
         void deleteSystem(systemid_t s);
         QueryResult getResults(queryid_t q);
+        void executeSystem(systemid_t sys);
         void executeSystemGroup(entity_t systemGroup);
 
         void step(float delta);

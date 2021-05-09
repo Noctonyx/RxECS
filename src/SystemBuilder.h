@@ -56,6 +56,11 @@ namespace ecs
 #if 0
         SystemBuilder& removeSet();
 #endif
+        template <class ... TArgs>
+        SystemBuilder& withRead();
+
+        template <class ... TArgs>
+        SystemBuilder& withWrite();
 
         SystemBuilder& inGroup(entity_t group);
         SystemBuilder& inGroup(const char * name);
