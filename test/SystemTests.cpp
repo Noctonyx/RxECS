@@ -252,4 +252,35 @@ TEST_SUITE("Systems")
 
         world.deleteSystem(system.id);
     }
+
+    TEST_CASE("Auto System Ordering")
+    {
+        ecs::World world;
+        world.newEntity().set<TestComponent>({ 2 });
+
+        int c = 0;
+
+        world.newEntity("Group:1").set<ecs::SystemGroup>({ 1, false, 0.f, 0.f });
+
+        world.createSystem("Ordering2").withQuery<TestComponent2>()
+            .inGroup("Group:1")
+            .each<TestComponent2>([&c](ecs::EntityHandle, const TestComponent2*)
+                {
+                    c++;
+                    CHECK(c == 1);
+                });
+
+        world.createSystem("Ordering").withQuery<TestComponent>()
+            .inGroup("Group:1")
+            .withWrite<TestComponent2>()
+            .each<TestComponent>([&c](ecs::EntityHandle, const TestComponent*)
+                {
+                    c++;
+                    CHECK(c == 2);
+                });
+
+        world.step(0.01f);
+        c = 0;
+        world.step(0.01f);
+    }
 }

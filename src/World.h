@@ -3,6 +3,7 @@
 #include <set>
 #include <typeinfo>
 #include <typeindex>
+#include <unordered_set>
 
 #include "robin_hood.h"
 
@@ -90,7 +91,82 @@ namespace ecs
         void * ptr;
         //        void 
     };
+#if 0
+    struct SystemProcess
+    {
+        bool complete;
+        World* world;
 
+        //virtual void start() = 0;
+        virtual bool isComplete() = 0;
+        virtual void check() = 0;
+        virtual void reset() = 0;
+
+        virtual ~SystemProcess() = default;
+    };
+#endif
+    struct SystemProcessNode
+    {
+        bool complete = false;
+
+        std::unordered_set<component_id_t> reads;
+        std::unordered_set<component_id_t> writes;     
+
+        systemid_t system = 0;
+
+        std::vector<std::shared_ptr<SystemProcessNode>> children;
+        std::vector<SystemProcessNode *> parents;
+
+        void reset()
+        {
+            complete = false;
+            for(auto & c: children) {
+                c->reset();
+            }
+        }
+    };
+
+#if 0
+    struct SingleSystemProcess final : SystemProcess
+    {
+        bool started;
+        systemid_t system;
+
+        bool isComplete() override;
+        void check() override;
+        void reset() override;
+    };
+
+    struct ParallelSystemProcess final : SystemProcess
+    {
+        std::unordered_set<std::unique_ptr<SystemProcess>> systems;
+
+        ~ParallelSystemProcess() override;
+       // void start() override;
+        bool isComplete() override;
+        void check() override;
+        void reset() override;
+    };
+
+    struct SeriesSystemProcess final : SystemProcess
+    {
+        std::vector<std::unique_ptr<SystemProcess>> systems;
+
+        //void start() override;
+        bool isComplete() override;
+        void check() override;
+        void reset() override;
+        ~SeriesSystemProcess() override;
+    };
+
+    struct SystemOrdering
+    {
+        bool isSerial;
+
+        std::unordered_set<systemid_t> parallel;
+        std::vector<systemid_t> serial;
+    };
+#endif
     class World
     {
         friend struct Table;
@@ -236,7 +312,7 @@ namespace ecs
         void ensureTableForArchetype(uint16_t);
 
         void recalculateSystemOrder();
-        void recalculateGroupSystemOrder(entity_t group, std::vector<entity_t> systems);
+        void recalculateGroupSystemOrder(entity_t group, std::vector<systemid_t> systems);
 
         static std::string trimName(const char * n);
 

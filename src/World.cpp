@@ -13,6 +13,92 @@
 
 namespace ecs
 {
+#if 0
+    bool SingleSystemProcess::isComplete()
+    {
+        return complete;
+    }
+
+    void SingleSystemProcess::check()
+    {
+        if(complete) {
+            return;
+        }
+
+        started = true;
+
+        world->executeSystem(system);
+        complete = true;
+    }
+
+    void SingleSystemProcess::reset()
+    {
+        complete = false;
+        started = false;
+    }
+
+    ParallelSystemProcess::~ParallelSystemProcess()
+    {
+        systems.clear();
+    }
+
+    bool ParallelSystemProcess::isComplete()
+    {
+        return complete;
+    }
+
+    void ParallelSystemProcess::check()
+    {
+        for (auto& s : systems) {
+            if (!s->isComplete()) {
+                s->check();
+            }
+        }
+        for (auto& s : systems) {
+            if (!s->isComplete()) {
+                return;
+            }
+        }
+        complete = true;
+    }
+
+    void ParallelSystemProcess::reset()
+    {
+        for(auto & s: systems) {
+            s->reset();
+        }
+        complete = false;
+    }
+
+    bool SeriesSystemProcess::isComplete()
+    {
+        return complete;
+    }
+
+    void SeriesSystemProcess::check()
+    {
+        for(auto & s: systems) {
+            if(!s->isComplete()) {
+                s->check();
+                return;
+            }
+        }
+        complete = true;
+    }
+
+    void SeriesSystemProcess::reset()
+    {
+        for (auto& s : systems) {
+            s->reset();
+        }
+        complete = false;
+    }
+
+    SeriesSystemProcess::~SeriesSystemProcess()
+    {
+        systems.clear();
+    }
+#endif
     World::World()
     {
         entities.resize(1);
@@ -57,10 +143,10 @@ namespace ecs
             delete s->ptr;
         });
 
-        for (auto& [k, v] : singletons) {
+        for (auto & [k, v]: singletons) {
             auto cd = getComponentDetails(k);
             cd->componentDestructor(v, cd->size, 1);
-            delete[] static_cast<char*>(v);
+            delete[] static_cast<char *>(v);
         }
 
         for (auto & [k, v]: tables) {
@@ -200,7 +286,7 @@ namespace ecs
 
     void World::remove(entity_t id, component_id_t componentId)
     {
-        if(!has(id, componentId)) {
+        if (!has(id, componentId)) {
             return;
         }
         if (componentId == getComponentId<Name>()) {
@@ -247,8 +333,8 @@ namespace ecs
             return nullptr;
         }
 
-        if(!has(id, componentId)) {
-            return  nullptr;
+        if (!has(id, componentId)) {
+            return nullptr;
         }
 
         auto at = getEntityArchetype(id);
@@ -284,18 +370,18 @@ namespace ecs
 
     void World::addSingleton(const component_id_t componentId)
     {
-        if(hasSingleton(componentId)) {
+        if (hasSingleton(componentId)) {
             return;
         }
         auto cd = getComponentDetails(componentId);
-        char* cp = new char[cd->size];
+        char * cp = new char[cd->size];
         cd->componentConstructor(cp, cd->size, 1);
         singletons[componentId] = cp;
     }
 
     bool World::hasSingleton(const component_id_t componentId) const
     {
-        if(singletons.contains(componentId)) {
+        if (singletons.contains(componentId)) {
             return true;
         }
         return false;
@@ -303,7 +389,7 @@ namespace ecs
 
     void World::removeSingleton(const component_id_t componentId)
     {
-        if(!hasSingleton(componentId)) {
+        if (!hasSingleton(componentId)) {
             return;
         }
 
@@ -312,7 +398,7 @@ namespace ecs
 
         cd->componentDestructor(ptr, cd->size, 1);
 
-        delete[] static_cast<char*>(ptr);
+        delete[] static_cast<char *>(ptr);
 
         singletons.erase(componentId);
     }
@@ -337,7 +423,7 @@ namespace ecs
 
     void * World::getSingletonUpdate(const component_id_t componentId)
     {
-        if(!hasSingleton(componentId)) {
+        if (!hasSingleton(componentId)) {
             return nullptr;
         }
         return singletons[componentId];
@@ -589,9 +675,63 @@ namespace ecs
         return WorldIterator{this, am.archetypes.end()};
     }
 
-    void World::recalculateGroupSystemOrder(entity_t group, std::vector<entity_t> systems)
+    void addReadWritesToNode(std::shared_ptr<SystemProcessNode>& target,
+        const std::unordered_set<component_id_t>& reads,
+        const std::unordered_set<component_id_t>& writes)
+    {
+        std::copy(reads.begin(), reads.end(),
+            std::inserter(target->reads, std::next(target->reads.begin())));
+        std::copy(writes.begin(), writes.end(),
+            std::inserter(target->writes, std::next(target->writes.begin())));
+    }
+
+    bool mustRunBefore(std::shared_ptr<SystemProcessNode> target, std::shared_ptr<SystemProcessNode> node)
+    {
+        std::vector<component_id_t> v;
+
+        std::ranges::set_intersection(target->reads, node->writes, std::back_inserter(v));
+        if (!v.empty()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    void addSystemNodeToNodes(std::shared_ptr<SystemProcessNode> target,
+                              std::shared_ptr<SystemProcessNode> node)
+    {
+        if (target->children.empty()) {
+            target->children.push_back(node);
+            //node->parents.push_back(target.get());
+            //addReadWritesToNode(target, node->reads, node->writes);
+            return;
+        }
+
+        for(size_t i=0; i < target->children.size(); i++) {
+            if(mustRunBefore(target->children[i], node)) {
+                target->children
+            }
+        }
+    }
+
+
+    void World::recalculateGroupSystemOrder(entity_t group, std::vector<systemid_t> systems)
     {
         systemOrder[group].clear();
+
+        std::shared_ptr<SystemProcessNode> start = std::make_shared<SystemProcessNode>();
+        std::vector<std::shared_ptr<SystemProcessNode>> nodes;
+
+        for (auto & sysid: systems) {
+            auto sys = get<System>(sysid);
+            assert(sys);
+
+            auto newNode = std::make_shared<SystemProcessNode>();
+            newNode->system = sysid;
+
+            addReadWritesToNode(newNode, sys->reads, sys->writes);
+            nodes.push_back(newNode);
+        }
 
         std::unordered_map<entity_t, uint32_t> labelCounts;
         std::unordered_map<entity_t, uint32_t> labelPreCounts;
@@ -673,6 +813,7 @@ namespace ecs
 
         systemOrder.clear();
         std::unordered_map<entity_t, std::vector<entity_t>> systems;
+        //std::unordered_map<entity_t, std::vector<entity_t>> systems;
 
         getResults(systemQuery).each<System, SystemSet>(
             [&](EntityHandle e, System * s, const SystemSet * set)
