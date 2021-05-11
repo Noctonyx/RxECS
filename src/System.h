@@ -1,5 +1,7 @@
 #pragma once
+#include <deque>
 #include <unordered_set>
+#include <unordered_map>
 
 #include "Entity.h"
 #include "QueryResult.h"
@@ -50,10 +52,16 @@ namespace ecs
     {
         uint32_t sequence;
 
-        bool fixed;
+        bool fixed = false;
 
-        float delta;
-        float rate;
+        float delta = 0.f;
+        float rate = 0.f;
+
+        std::unordered_map<component_id_t, uint32_t> writeCounts{};
+        std::unordered_map<entity_t, uint32_t> labelCounts{};
+        std::unordered_map<entity_t, uint32_t> labelPreCounts{};
+
+        std::vector<systemid_t> systems{};
     };
 
     struct System
@@ -64,6 +72,7 @@ namespace ecs
         std::function<void(World *)> executeProcessor;
         std::function<void(Stream *)> streamProcessor;
         bool enabled = true;
+
         std::set<entity_t> labels;
         std::set<entity_t> befores;
         std::set<entity_t> afters;
@@ -73,9 +82,13 @@ namespace ecs
 
         entity_t groupId = 0;
 
+        bool complete = false;
+        bool ready = false;
+
         bool thread = false;
 
         component_id_t stream = 0;
+        size_t count = 0;
         //bool dirtyOrder = true;
     };
 

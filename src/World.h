@@ -3,6 +3,7 @@
 #include <set>
 #include <typeinfo>
 #include <typeindex>
+#include <unordered_set>
 
 #include "robin_hood.h"
 
@@ -88,7 +89,6 @@ namespace ecs
         entity_t entity;
         component_id_t component;
         void * ptr;
-        //        void 
     };
 
     class World
@@ -196,6 +196,7 @@ namespace ecs
         void deleteSystem(systemid_t s);
         QueryResult getResults(queryid_t q);
         void executeSystem(systemid_t sys);
+        void executeGroupsSystems(entity_t systemGroup);
         void executeSystemGroup(entity_t systemGroup);
 
         void step(float delta);
@@ -236,7 +237,7 @@ namespace ecs
         void ensureTableForArchetype(uint16_t);
 
         void recalculateSystemOrder();
-        void recalculateGroupSystemOrder(entity_t group, std::vector<entity_t> systems);
+        void recalculateGroupSystemOrder(entity_t group, std::vector<systemid_t> systems);
 
         static std::string trimName(const char * n);
 
@@ -262,8 +263,6 @@ namespace ecs
         std::vector<DeferredCommand> deferredCommands;
 
         std::vector<entity_t> pipelineGroupSequence;
-        std::unordered_map<entity_t, std::vector<entity_t>> systemOrder;
-        //std::vector<entity_t> systemOrder{};
         robin_hood::unordered_map<std::string, entity_t> nameIndex{};
 
         robin_hood::unordered_map<component_id_t, void *> singletons;

@@ -13,6 +13,92 @@
 
 namespace ecs
 {
+#if 0
+    bool SingleSystemProcess::isComplete()
+    {
+        return complete;
+    }
+
+    void SingleSystemProcess::check()
+    {
+        if(complete) {
+            return;
+        }
+
+        started = true;
+
+        world->executeSystem(system);
+        complete = true;
+    }
+
+    void SingleSystemProcess::reset()
+    {
+        complete = false;
+        started = false;
+    }
+
+    ParallelSystemProcess::~ParallelSystemProcess()
+    {
+        systems.clear();
+    }
+
+    bool ParallelSystemProcess::isComplete()
+    {
+        return complete;
+    }
+
+    void ParallelSystemProcess::check()
+    {
+        for (auto& s : systems) {
+            if (!s->isComplete()) {
+                s->check();
+            }
+        }
+        for (auto& s : systems) {
+            if (!s->isComplete()) {
+                return;
+            }
+        }
+        complete = true;
+    }
+
+    void ParallelSystemProcess::reset()
+    {
+        for(auto & s: systems) {
+            s->reset();
+        }
+        complete = false;
+    }
+
+    bool SeriesSystemProcess::isComplete()
+    {
+        return complete;
+    }
+
+    void SeriesSystemProcess::check()
+    {
+        for(auto & s: systems) {
+            if(!s->isComplete()) {
+                s->check();
+                return;
+            }
+        }
+        complete = true;
+    }
+
+    void SeriesSystemProcess::reset()
+    {
+        for (auto& s : systems) {
+            s->reset();
+        }
+        complete = false;
+    }
+
+    SeriesSystemProcess::~SeriesSystemProcess()
+    {
+        systems.clear();
+    }
+#endif
     World::World()
     {
         entities.resize(1);
@@ -57,10 +143,10 @@ namespace ecs
             delete s->ptr;
         });
 
-        for (auto& [k, v] : singletons) {
+        for (auto & [k, v]: singletons) {
             auto cd = getComponentDetails(k);
             cd->componentDestructor(v, cd->size, 1);
-            delete[] static_cast<char*>(v);
+            delete[] static_cast<char *>(v);
         }
 
         for (auto & [k, v]: tables) {
@@ -200,7 +286,7 @@ namespace ecs
 
     void World::remove(entity_t id, component_id_t componentId)
     {
-        if(!has(id, componentId)) {
+        if (!has(id, componentId)) {
             return;
         }
         if (componentId == getComponentId<Name>()) {
@@ -247,8 +333,8 @@ namespace ecs
             return nullptr;
         }
 
-        if(!has(id, componentId)) {
-            return  nullptr;
+        if (!has(id, componentId)) {
+            return nullptr;
         }
 
         auto at = getEntityArchetype(id);
@@ -284,18 +370,18 @@ namespace ecs
 
     void World::addSingleton(const component_id_t componentId)
     {
-        if(hasSingleton(componentId)) {
+        if (hasSingleton(componentId)) {
             return;
         }
         auto cd = getComponentDetails(componentId);
-        char* cp = new char[cd->size];
+        char * cp = new char[cd->size];
         cd->componentConstructor(cp, cd->size, 1);
         singletons[componentId] = cp;
     }
 
     bool World::hasSingleton(const component_id_t componentId) const
     {
-        if(singletons.contains(componentId)) {
+        if (singletons.contains(componentId)) {
             return true;
         }
         return false;
@@ -303,7 +389,7 @@ namespace ecs
 
     void World::removeSingleton(const component_id_t componentId)
     {
-        if(!hasSingleton(componentId)) {
+        if (!hasSingleton(componentId)) {
             return;
         }
 
@@ -312,7 +398,7 @@ namespace ecs
 
         cd->componentDestructor(ptr, cd->size, 1);
 
-        delete[] static_cast<char*>(ptr);
+        delete[] static_cast<char *>(ptr);
 
         singletons.erase(componentId);
     }
@@ -337,7 +423,7 @@ namespace ecs
 
     void * World::getSingletonUpdate(const component_id_t componentId)
     {
-        if(!hasSingleton(componentId)) {
+        if (!hasSingleton(componentId)) {
             return nullptr;
         }
         return singletons[componentId];
@@ -419,16 +505,99 @@ namespace ecs
     void World::executeSystem(systemid_t sys)
     {
         if (isAlive(sys)) {
-            if (auto system = get<System>(sys); system) {
+            if (auto system = getUpdate<System>(sys); system) {
                 if (system->query) {
                     auto res = getResults(system->query);
+                    system->count = res.count();
                     system->queryProcessor(res);
                 } else if (system->stream) {
+                    auto str = getStream(system->stream);
+                    system->count = str->active.size();
                     system->streamProcessor(getStream(system->stream));
                 } else {
+                    system->count = 1;
                     system->executeProcessor(this);
                 }
             }
+        }
+    }
+
+
+    void World::executeGroupsSystems(entity_t systemGroup)
+    {
+        std::unordered_map<component_id_t, uint32_t> writeCounts{};
+        std::unordered_map<entity_t, uint32_t> labelCounts{};
+        std::unordered_map<entity_t, uint32_t> labelPreCounts{};
+
+        std::deque<systemid_t> systemsToRun;
+
+        auto grp = getUpdate<SystemGroup>(systemGroup);
+
+        for (auto & [k, v]: grp->writeCounts) {
+            writeCounts[k] = v;
+        }
+        for (auto & [k, v]: grp->labelPreCounts) {
+            labelPreCounts[k] = v;
+        }
+        for (auto & [k, v]: grp->labelCounts) {
+            labelCounts[k] = v;
+        }
+        for (auto & s: grp->systems) {
+            systemsToRun.push_back(s);
+        }
+        uint32_t sentinel = 0;
+
+        while (!systemsToRun.empty()) {
+            auto entity = systemsToRun.front();
+            auto system = getUpdate<System>(entity);
+
+            bool canProcess = true;
+
+            if (sentinel > systemsToRun.size()) {
+                for(auto xx: systemsToRun) {
+                    printf("%s\n", description(xx).c_str());
+                }
+                throw std::runtime_error("Systems define a cycle and cannot run");
+            }
+
+            for (auto & af: system->afters) {
+                if (labelCounts[af] > 0) {
+                    canProcess = false;
+                }
+            }
+
+            for (auto & af: system->labels) {
+                if (labelPreCounts[af] > 0) {
+                    canProcess = false;
+                }
+            }
+
+            for (auto & af: system->reads) {
+                if (!system->writes.contains(af) && writeCounts[af] > 0) {
+                    canProcess = false;
+                }
+            }
+
+            if (!canProcess) {
+                auto ns = systemsToRun.front();
+                systemsToRun.pop_front();
+                systemsToRun.push_back(ns);
+                sentinel++;
+                continue;
+            }
+            sentinel = 0;
+            executeSystem(entity);
+
+            for (auto & af: system->labels) {
+                labelCounts[af]--;
+            }
+            for (auto & bf: system->befores) {
+                labelPreCounts[bf]--;
+            }
+            for (auto & bf: system->writes) {
+                writeCounts[bf]--;
+            }
+            systemsToRun.pop_front();
         }
     }
 
@@ -450,11 +619,7 @@ namespace ecs
                     break;
                 }
             }
-            std::vector<systemid_t> & systems = systemOrder[systemGroup];
-
-            for (systemid_t sys: systems) {
-                executeSystem(sys);
-            }
+            executeGroupsSystems(systemGroup);
         } while (gd->fixed && gd->delta >= gd->rate);
 
         deltaTime_ = savedDelta;
@@ -463,20 +628,7 @@ namespace ecs
     void World::step(float delta)
     {
         deltaTime_ = delta;
-#if 0
-        bool anyDirty = true;
-
-        getResults(systemQuery).each<System>([&anyDirty](World *, entity_t, System * s)
-        {
-            anyDirty |= s->dirtyOrder;
-        });
-
-        if (anyDirty) {
-#endif
         recalculateSystemOrder();
-#if 0
-        }
-#endif
 
         for (auto pg: pipelineGroupSequence) {
             executeSystemGroup(pg);
@@ -589,12 +741,14 @@ namespace ecs
         return WorldIterator{this, am.archetypes.end()};
     }
 
-    void World::recalculateGroupSystemOrder(entity_t group, std::vector<entity_t> systems)
+    void World::recalculateGroupSystemOrder(entity_t group, std::vector<systemid_t> systems)
     {
-        systemOrder[group].clear();
+        auto grp = getUpdate<SystemGroup>(group);
+        grp->systems.clear();
+        grp->labelPreCounts.clear();
+        grp->labelCounts.clear();
+        grp->writeCounts.clear();
 
-        std::unordered_map<entity_t, uint32_t> labelCounts;
-        std::unordered_map<entity_t, uint32_t> labelPreCounts;
         std::deque<std::pair<entity_t, const System *>> toProcess;
         std::unordered_map<entity_t, std::set<entity_t>> ready;
 
@@ -603,52 +757,22 @@ namespace ecs
 
             if (sys->enabled) {
                 toProcess.push_back({s, sys});
+                grp->systems.push_back(s);
             }
         }
 
         for (auto & [e, s]: toProcess) {
             for (auto & l: s->labels) {
-                labelCounts[l]++;
+                grp->labelCounts[l]++;
             }
 
             for (auto & l: s->befores) {
-                labelPreCounts[l]++;
-            }
-        }
-
-        while (!toProcess.empty()) {
-            auto [entity, system] = toProcess.front();
-
-            bool canProcess = true;
-
-            for (auto & af: system->afters) {
-                if (labelCounts[af] > 0) {
-                    canProcess = false;
-                }
+                grp->labelPreCounts[l]++;
             }
 
-            for (auto & af: system->labels) {
-                if (labelPreCounts[af] > 0) {
-                    canProcess = false;
-                }
+            for (auto & l: s->writes) {
+                grp->writeCounts[l]++;
             }
-
-            if (!canProcess) {
-                auto ns = toProcess.front();
-                toProcess.pop_front();
-                toProcess.push_back(ns);
-                continue;
-            }
-
-            for (auto & af: system->labels) {
-                labelCounts[af]--;
-            }
-            for (auto & bf: system->befores) {
-                labelPreCounts[bf]--;
-            }
-            systemOrder[group].push_back(entity);
-            //getUpdate<System>(entity)->dirtyOrder = false;
-            toProcess.pop_front();
         }
     }
 
@@ -671,7 +795,6 @@ namespace ecs
             return;
         }
 
-        systemOrder.clear();
         std::unordered_map<entity_t, std::vector<entity_t>> systems;
 
         getResults(systemQuery).each<System, SystemSet>(
