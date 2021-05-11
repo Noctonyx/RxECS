@@ -89,84 +89,8 @@ namespace ecs
         entity_t entity;
         component_id_t component;
         void * ptr;
-        //        void 
-    };
-#if 0
-    struct SystemProcess
-    {
-        bool complete;
-        World* world;
-
-        //virtual void start() = 0;
-        virtual bool isComplete() = 0;
-        virtual void check() = 0;
-        virtual void reset() = 0;
-
-        virtual ~SystemProcess() = default;
-    };
-#endif
-    struct SystemProcessNode
-    {
-        bool complete = false;
-
-        std::unordered_set<component_id_t> reads;
-        std::unordered_set<component_id_t> writes;     
-
-        systemid_t system = 0;
-
-        std::vector<std::shared_ptr<SystemProcessNode>> children;
-        std::vector<SystemProcessNode *> parents;
-
-        void reset()
-        {
-            complete = false;
-            for(auto & c: children) {
-                c->reset();
-            }
-        }
     };
 
-#if 0
-    struct SingleSystemProcess final : SystemProcess
-    {
-        bool started;
-        systemid_t system;
-
-        bool isComplete() override;
-        void check() override;
-        void reset() override;
-    };
-
-    struct ParallelSystemProcess final : SystemProcess
-    {
-        std::unordered_set<std::unique_ptr<SystemProcess>> systems;
-
-        ~ParallelSystemProcess() override;
-       // void start() override;
-        bool isComplete() override;
-        void check() override;
-        void reset() override;
-    };
-
-    struct SeriesSystemProcess final : SystemProcess
-    {
-        std::vector<std::unique_ptr<SystemProcess>> systems;
-
-        //void start() override;
-        bool isComplete() override;
-        void check() override;
-        void reset() override;
-        ~SeriesSystemProcess() override;
-    };
-
-    struct SystemOrdering
-    {
-        bool isSerial;
-
-        std::unordered_set<systemid_t> parallel;
-        std::vector<systemid_t> serial;
-    };
-#endif
     class World
     {
         friend struct Table;
@@ -272,6 +196,7 @@ namespace ecs
         void deleteSystem(systemid_t s);
         QueryResult getResults(queryid_t q);
         void executeSystem(systemid_t sys);
+        void executeGroupsSystems(entity_t systemGroup);
         void executeSystemGroup(entity_t systemGroup);
 
         void step(float delta);
@@ -338,8 +263,6 @@ namespace ecs
         std::vector<DeferredCommand> deferredCommands;
 
         std::vector<entity_t> pipelineGroupSequence;
-        std::unordered_map<entity_t, std::vector<entity_t>> systemOrder;
-        //std::vector<entity_t> systemOrder{};
         robin_hood::unordered_map<std::string, entity_t> nameIndex{};
 
         robin_hood::unordered_map<component_id_t, void *> singletons;

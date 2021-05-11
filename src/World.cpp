@@ -505,16 +505,99 @@ namespace ecs
     void World::executeSystem(systemid_t sys)
     {
         if (isAlive(sys)) {
-            if (auto system = get<System>(sys); system) {
+            if (auto system = getUpdate<System>(sys); system) {
                 if (system->query) {
                     auto res = getResults(system->query);
+                    system->count = res.count();
                     system->queryProcessor(res);
                 } else if (system->stream) {
+                    auto str = getStream(system->stream);
+                    system->count = str->active.size();
                     system->streamProcessor(getStream(system->stream));
                 } else {
+                    system->count = 1;
                     system->executeProcessor(this);
                 }
             }
+        }
+    }
+
+
+    void World::executeGroupsSystems(entity_t systemGroup)
+    {
+        std::unordered_map<component_id_t, uint32_t> writeCounts{};
+        std::unordered_map<entity_t, uint32_t> labelCounts{};
+        std::unordered_map<entity_t, uint32_t> labelPreCounts{};
+
+        std::deque<systemid_t> systemsToRun;
+
+        auto grp = getUpdate<SystemGroup>(systemGroup);
+
+        for (auto & [k, v]: grp->writeCounts) {
+            writeCounts[k] = v;
+        }
+        for (auto & [k, v]: grp->labelPreCounts) {
+            labelPreCounts[k] = v;
+        }
+        for (auto & [k, v]: grp->labelCounts) {
+            labelCounts[k] = v;
+        }
+        for (auto & s: grp->systems) {
+            systemsToRun.push_back(s);
+        }
+        uint32_t sentinel = 0;
+
+        while (!systemsToRun.empty()) {
+            auto entity = systemsToRun.front();
+            auto system = getUpdate<System>(entity);
+
+            bool canProcess = true;
+
+            if (sentinel > systemsToRun.size()) {
+                for(auto xx: systemsToRun) {
+                    printf("%s\n", description(xx).c_str());
+                }
+                throw std::runtime_error("Systems define a cycle and cannot run");
+            }
+
+            for (auto & af: system->afters) {
+                if (labelCounts[af] > 0) {
+                    canProcess = false;
+                }
+            }
+
+            for (auto & af: system->labels) {
+                if (labelPreCounts[af] > 0) {
+                    canProcess = false;
+                }
+            }
+
+            for (auto & af: system->reads) {
+                if (!system->writes.contains(af) && writeCounts[af] > 0) {
+                    canProcess = false;
+                }
+            }
+
+            if (!canProcess) {
+                auto ns = systemsToRun.front();
+                systemsToRun.pop_front();
+                systemsToRun.push_back(ns);
+                sentinel++;
+                continue;
+            }
+            sentinel = 0;
+            executeSystem(entity);
+
+            for (auto & af: system->labels) {
+                labelCounts[af]--;
+            }
+            for (auto & bf: system->befores) {
+                labelPreCounts[bf]--;
+            }
+            for (auto & bf: system->writes) {
+                writeCounts[bf]--;
+            }
+            systemsToRun.pop_front();
         }
     }
 
@@ -536,11 +619,7 @@ namespace ecs
                     break;
                 }
             }
-            std::vector<systemid_t> & systems = systemOrder[systemGroup];
-
-            for (systemid_t sys: systems) {
-                executeSystem(sys);
-            }
+            executeGroupsSystems(systemGroup);
         } while (gd->fixed && gd->delta >= gd->rate);
 
         deltaTime_ = savedDelta;
@@ -549,20 +628,7 @@ namespace ecs
     void World::step(float delta)
     {
         deltaTime_ = delta;
-#if 0
-        bool anyDirty = true;
-
-        getResults(systemQuery).each<System>([&anyDirty](World *, entity_t, System * s)
-        {
-            anyDirty |= s->dirtyOrder;
-        });
-
-        if (anyDirty) {
-#endif
         recalculateSystemOrder();
-#if 0
-        }
-#endif
 
         for (auto pg: pipelineGroupSequence) {
             executeSystemGroup(pg);
@@ -675,66 +741,14 @@ namespace ecs
         return WorldIterator{this, am.archetypes.end()};
     }
 
-    void addReadWritesToNode(std::shared_ptr<SystemProcessNode>& target,
-        const std::unordered_set<component_id_t>& reads,
-        const std::unordered_set<component_id_t>& writes)
-    {
-        std::copy(reads.begin(), reads.end(),
-            std::inserter(target->reads, std::next(target->reads.begin())));
-        std::copy(writes.begin(), writes.end(),
-            std::inserter(target->writes, std::next(target->writes.begin())));
-    }
-
-    bool mustRunBefore(std::shared_ptr<SystemProcessNode> target, std::shared_ptr<SystemProcessNode> node)
-    {
-        std::vector<component_id_t> v;
-
-        std::ranges::set_intersection(target->reads, node->writes, std::back_inserter(v));
-        if (!v.empty()) {
-            return true;
-        }
-
-        return false;
-    }
-
-    void addSystemNodeToNodes(std::shared_ptr<SystemProcessNode> target,
-                              std::shared_ptr<SystemProcessNode> node)
-    {
-        if (target->children.empty()) {
-            target->children.push_back(node);
-            //node->parents.push_back(target.get());
-            //addReadWritesToNode(target, node->reads, node->writes);
-            return;
-        }
-
-        for(size_t i=0; i < target->children.size(); i++) {
-            if(mustRunBefore(target->children[i], node)) {
-                target->children
-            }
-        }
-    }
-
-
     void World::recalculateGroupSystemOrder(entity_t group, std::vector<systemid_t> systems)
     {
-        systemOrder[group].clear();
+        auto grp = getUpdate<SystemGroup>(group);
+        grp->systems.clear();
+        grp->labelPreCounts.clear();
+        grp->labelCounts.clear();
+        grp->writeCounts.clear();
 
-        std::shared_ptr<SystemProcessNode> start = std::make_shared<SystemProcessNode>();
-        std::vector<std::shared_ptr<SystemProcessNode>> nodes;
-
-        for (auto & sysid: systems) {
-            auto sys = get<System>(sysid);
-            assert(sys);
-
-            auto newNode = std::make_shared<SystemProcessNode>();
-            newNode->system = sysid;
-
-            addReadWritesToNode(newNode, sys->reads, sys->writes);
-            nodes.push_back(newNode);
-        }
-
-        std::unordered_map<entity_t, uint32_t> labelCounts;
-        std::unordered_map<entity_t, uint32_t> labelPreCounts;
         std::deque<std::pair<entity_t, const System *>> toProcess;
         std::unordered_map<entity_t, std::set<entity_t>> ready;
 
@@ -743,52 +757,22 @@ namespace ecs
 
             if (sys->enabled) {
                 toProcess.push_back({s, sys});
+                grp->systems.push_back(s);
             }
         }
 
         for (auto & [e, s]: toProcess) {
             for (auto & l: s->labels) {
-                labelCounts[l]++;
+                grp->labelCounts[l]++;
             }
 
             for (auto & l: s->befores) {
-                labelPreCounts[l]++;
-            }
-        }
-
-        while (!toProcess.empty()) {
-            auto [entity, system] = toProcess.front();
-
-            bool canProcess = true;
-
-            for (auto & af: system->afters) {
-                if (labelCounts[af] > 0) {
-                    canProcess = false;
-                }
+                grp->labelPreCounts[l]++;
             }
 
-            for (auto & af: system->labels) {
-                if (labelPreCounts[af] > 0) {
-                    canProcess = false;
-                }
+            for (auto & l: s->writes) {
+                grp->writeCounts[l]++;
             }
-
-            if (!canProcess) {
-                auto ns = toProcess.front();
-                toProcess.pop_front();
-                toProcess.push_back(ns);
-                continue;
-            }
-
-            for (auto & af: system->labels) {
-                labelCounts[af]--;
-            }
-            for (auto & bf: system->befores) {
-                labelPreCounts[bf]--;
-            }
-            systemOrder[group].push_back(entity);
-            //getUpdate<System>(entity)->dirtyOrder = false;
-            toProcess.pop_front();
         }
     }
 
@@ -811,9 +795,7 @@ namespace ecs
             return;
         }
 
-        systemOrder.clear();
         std::unordered_map<entity_t, std::vector<entity_t>> systems;
-        //std::unordered_map<entity_t, std::vector<entity_t>> systems;
 
         getResults(systemQuery).each<System, SystemSet>(
             [&](EntityHandle e, System * s, const SystemSet * set)
