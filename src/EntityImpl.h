@@ -106,7 +106,7 @@ namespace ecs
         assert(isAlive());
         assert(has<Prefab>());
 
-        auto e = EntityHandle{world->instantiate(id).id, world};
+        auto e = world->instantiate(id);
         if (name) {
             e.set<Name>({name});
         }
