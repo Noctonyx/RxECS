@@ -73,6 +73,9 @@ namespace ecs
         template <typename Func>
         SystemBuilder& execute(Func&& f);
 
+        template <typename Func>
+        SystemBuilder& executeIfNone(Func&& f);
+
         template <typename U, typename Func>
         SystemBuilder& execute(Func&& f);
     };

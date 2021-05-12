@@ -213,6 +213,23 @@ namespace ecs
         return *this;
     }
 
+    template <typename Func>
+    SystemBuilder & SystemBuilder::executeIfNone(Func && f)
+    {
+        assert(q);
+        assert(!stream);
+
+        auto s = world->getUpdate<System>(id);
+        assert(s->groupId);
+
+        s->executeProcessor = [=](ecs::World* w)
+        {
+            f(w);
+        };
+
+        return *this;
+    }
+
     template <typename U, typename Func>
     SystemBuilder & SystemBuilder::execute(Func && f)
     {

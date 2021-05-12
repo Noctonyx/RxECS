@@ -423,7 +423,13 @@ namespace ecs
                 if (system->query) {
                     auto res = getResults(system->query);
                     system->count = res.count();
-                    system->queryProcessor(res);
+                    if (system->queryProcessor) {
+                        system->queryProcessor(res);
+                    } else if (system->executeProcessor) {
+                        if (system->count == 0) {
+                            system->executeProcessor(this);
+                        }
+                    }
                 } else if (system->stream) {
                     auto str = getStream(system->stream);
                     system->count = str->active.size();
@@ -468,7 +474,7 @@ namespace ecs
             bool canProcess = true;
 
             if (sentinel > systemsToRun.size()) {
-                for(auto xx: systemsToRun) {
+                for (auto xx: systemsToRun) {
                     printf("%s\n", description(xx).c_str());
                 }
                 throw std::runtime_error("Systems define a cycle and cannot run");
