@@ -190,7 +190,7 @@ namespace ecs
         template <class ... TArgs>
         QueryBuilder createQuery();
 
-        SystemBuilder createSystem(const char * name);
+        SystemBuilder createSystem(const char * name = nullptr);
 
         void deleteQuery(queryid_t q);
         void deleteSystem(systemid_t s);

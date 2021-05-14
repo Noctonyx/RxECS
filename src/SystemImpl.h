@@ -237,7 +237,10 @@ namespace ecs
         assert(stream);
 
         auto s = world->getUpdate<System>(id);
-        assert(s->groupId);
+
+        if(!s->groupId) {
+            throw std::runtime_error("Missing group for System");
+        }
 
         s->reads.insert(world->getComponentId<U>());
 

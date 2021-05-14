@@ -378,8 +378,10 @@ namespace ecs
     {
         auto s = newEntity();
         s.set<System>(System{.query = 0, .world = this});
-        s.set<Name>({.name = name});
-        nameIndex[name] = s.id;
+        if (name) {
+            s.set<Name>({.name = name});
+            nameIndex[name] = s.id;
+        }
 
         markSystemsDirty();
 
