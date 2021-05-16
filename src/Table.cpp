@@ -62,13 +62,13 @@ namespace ecs
 
     const void * Table::getComponent(entity_t id, component_id_t componentId)
     {
-        //auto x = columns.find(componentId);
-        //(void)x;
-        if(!columns.contains(componentId)) {
+        auto it = columns.find(componentId);
+
+        if(it == columns.end()) {
             return nullptr;
         }
         const uint32_t row = getEntityRow(id);
-        Column * c = columns[componentId];
+        Column * c = it->second;
 
         return c->getEntry(row);
     }

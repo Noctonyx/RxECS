@@ -417,8 +417,10 @@ namespace ecs
         constexpr bool is_relation = std::is_base_of<Relation, std::remove_reference_t<T>>();
 
         auto v = std::type_index(typeid(std::remove_reference_t<T>));
-        if (componentMap.find(v) != componentMap.end()) {
-            return componentMap[v];
+
+        auto it = componentMap.find(v);
+        if (it != componentMap.end()) {
+            return it->second;
         }
 
         component_id_t id = newEntity().id;
