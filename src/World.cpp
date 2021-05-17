@@ -25,7 +25,7 @@ namespace ecs
         tables[0]->addEntity(0);
 
         componentBootstrapId = newEntity().id;
-        auto v = std::type_index(typeid(Component));
+        auto v = type_id<Component>();// std::type_index(typeid(Component));
         componentMap.emplace(v, componentBootstrapId);
         componentBootstrap = {
             trimName(typeid(Component).name()),

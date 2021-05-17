@@ -18,6 +18,36 @@
 
 namespace ecs
 {
+    namespace type_helper
+    {
+        template <typename T>
+        struct type_id_ptr
+        {
+            static const T * const id;
+            static const entity_t entityId;
+        };
+
+        template <typename T>
+        const T * const type_id_ptr<T>::id = nullptr;
+
+        template <typename T>
+        const entity_t type_id_ptr<T>::entityId = 0;
+    }
+
+    using type_id_t = const void *;
+
+    template <typename T>
+    constexpr auto type_id() noexcept -> type_id_t
+    {
+        return &type_helper::type_id_ptr<T>::id;
+    }
+
+    template <typename T>
+    constexpr auto type_entity() noexcept -> entity_t
+    {
+        return &type_helper::type_id_ptr<T>::entityId;
+    }
+
     struct Stream;
     struct Query;
 
@@ -245,7 +275,7 @@ namespace ecs
         std::vector<EntityEntry> entities{};
 
         size_t recycleStart;
-        robin_hood::unordered_map<std::type_index, component_id_t> componentMap{};
+        robin_hood::unordered_map<type_id_t, component_id_t> componentMap{};
 
         Component componentBootstrap;
         component_id_t componentBootstrapId;
@@ -416,7 +446,7 @@ namespace ecs
 
         constexpr bool is_relation = std::is_base_of<Relation, std::remove_reference_t<T>>();
 
-        auto v = std::type_index(typeid(std::remove_reference_t<T>));
+        auto v = type_id<std::remove_reference_t<T>>();
 
         auto it = componentMap.find(v);
         if (it != componentMap.end()) {
