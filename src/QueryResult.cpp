@@ -83,9 +83,16 @@ namespace ecs
             components.insert(w);
         }
 
-        for (const auto& r: withRelations) {
-            relations.insert(r);
+
+        for (auto& [c, v] : withRelations) {
+            for (auto vx : v) {
+                relationLookup[vx] = c;
+            }
         }
+
+//        for (const auto& r: withRelations) {
+  //          relations.insert(r);
+    //    }
 
         for (auto r: withSingletons) {
             singletons.insert(r);
@@ -135,26 +142,28 @@ namespace ecs
                                        const component_id_t componentId,
                                        bool mutate)
     {
-        for (auto & [relation, relation_components]: relations) {
-            if (relation_components.contains(componentId)) {
-                const auto relation_ptr = chunk.get(relation, row);
-                //assert(relation_ptr);
-                if (relation_ptr) {
-                    auto rp = static_cast<const Relation *>(relation_ptr);
-                    if (!world->isAlive(rp->entity)) {
-                        continue;
-                    }
-                    if (mutate) {
-                        auto related_component_ptr = world->getUpdate(rp->entity, componentId);
-                        if (related_component_ptr) {
-                            return related_component_ptr;
-                        }
-                    } else {
-                        auto related_component_ptr = world->get(rp->entity, componentId);
-                        if (related_component_ptr) {
-                            return const_cast<void *>(related_component_ptr);
-                        }
-                    }
+        auto it = relationLookup.find(componentId);
+        if(it == relationLookup.end()) {
+            return nullptr;
+        }
+        auto relation = it->second;
+
+        const auto relation_ptr = chunk.get(relation, row);
+        if (relation_ptr) {
+            auto rp = static_cast<const Relation*>(relation_ptr);
+            if (!world->isAlive(rp->entity)) {
+                return nullptr;
+            }
+            if (mutate) {
+                auto related_component_ptr = world->getUpdate(rp->entity, componentId);
+                if (related_component_ptr) {
+                    return related_component_ptr;
+                }
+            }
+            else {
+                auto related_component_ptr = world->get(rp->entity, componentId);
+                if (related_component_ptr) {
+                    return const_cast<void*>(related_component_ptr);
                 }
             }
         }

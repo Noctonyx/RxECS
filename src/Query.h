@@ -14,6 +14,7 @@ namespace ecs
         std::set<component_id_t> optional{};
         std::set<component_id_t> singleton{};
         std::set<std::pair<component_id_t, std::set<component_id_t>>> relations{};
+        std::unordered_map<component_id_t, component_id_t> relationLookup;
 
         bool inheritamce = false;
 
@@ -46,6 +47,14 @@ namespace ecs
             for (auto & i: *world) {
                 if (interestedInArchetype(i)) {
                     tables.push_back(world->getTableForArchetype(i.id));
+                }
+            }
+
+            relationLookup.clear();
+
+            for(auto & [c, v]: relations) {
+                for(auto vx: v) {
+                    relationLookup[vx] = c;
                 }
             }
         }

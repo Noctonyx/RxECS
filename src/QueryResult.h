@@ -133,7 +133,8 @@ namespace ecs
         World * world;
         std::set<component_id_t> components;
         std::vector<QueryResultChunk> chunks;
-        std::set<std::pair<component_id_t, std::set<component_id_t>>> relations;
+        //std::set<std::pair<component_id_t, std::set<component_id_t>>> relations;
+        robin_hood::unordered_map<component_id_t, component_id_t> relationLookup;
         std::set<component_id_t> singletons;
         bool inheritance;
 

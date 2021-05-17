@@ -225,7 +225,8 @@ namespace ecs
             return nullptr;
         }
         auto at = getEntityArchetype(id);
-        auto table = tables[at];
+        auto table_it = tables.find(at);
+        auto table = table_it->second;
 
         const void * ptr = table->getComponent(id, componentId);
         if (ptr || !inherited) {
