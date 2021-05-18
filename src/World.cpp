@@ -42,7 +42,7 @@ namespace ecs
         set<Name>(getComponentId<Name>(), {.name="Name"});
 
         // Query to find queries
-        queryQuery = createQuery<Query>().id;
+        queryQuery = createQuery<Query>().id; 
 
         // query to find systems
         systemQuery = createQuery<System>().withRelation<SetForSystem, SystemSet>().id;
@@ -423,6 +423,8 @@ namespace ecs
     {
         if (isAlive(sys)) {
             if (auto system = getUpdate<System>(sys); system) {
+                ActiveSystem as(this, system);
+
                 if (system->query) {
                     auto res = getResults(system->query);
                     system->count = res.count();

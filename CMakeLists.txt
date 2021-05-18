@@ -11,6 +11,7 @@ add_library(RxECS STATIC
     src/Column.cpp
     src/Table.cpp
     src/robin_hood.h
+    src/robin_hood.natvis
     src/ArchetypeManager.h
     src/Query.h
     src/QueryResult.h

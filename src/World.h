@@ -18,6 +18,8 @@
 
 namespace ecs
 {
+    struct System;
+
     namespace type_helper
     {
         template <typename T>
@@ -29,9 +31,6 @@ namespace ecs
 
         template <typename T>
         const T * const type_id_ptr<T>::id = nullptr;
-
-        template <typename T>
-        const entity_t type_id_ptr<T>::entityId = 0;
     }
 
     using type_id_t = const void *;
@@ -40,12 +39,6 @@ namespace ecs
     constexpr auto type_id() noexcept -> type_id_t
     {
         return &type_helper::type_id_ptr<T>::id;
-    }
-
-    template <typename T>
-    constexpr auto type_entity() noexcept -> entity_t
-    {
-        return &type_helper::type_id_ptr<T>::entityId;
     }
 
     struct Stream;
@@ -124,6 +117,7 @@ namespace ecs
     class World
     {
         friend struct Table;
+        friend class ActiveSystem;
 
     public:
         World();
@@ -234,7 +228,7 @@ namespace ecs
         WorldIterator begin();
         WorldIterator end();
 
-        robin_hood::unordered_map<component_id_t, void *> & allSingletons()
+        std::unordered_map<component_id_t, void *> & allSingletons()
         {
             return singletons;
         }
@@ -275,12 +269,12 @@ namespace ecs
         std::vector<EntityEntry> entities{};
 
         size_t recycleStart;
-        robin_hood::unordered_map<type_id_t, component_id_t> componentMap{};
+        robin_hood::unordered_flat_map<type_id_t, component_id_t> componentMap{};
 
         Component componentBootstrap;
         component_id_t componentBootstrapId;
 
-        robin_hood::unordered_map<uint16_t, Table *> tables;
+        robin_hood::unordered_flat_map<uint16_t, Table *> tables;
         //robin_hood::unordered_map<component_id_t> streams;
 
         float deltaTime_;
@@ -295,9 +289,12 @@ namespace ecs
         std::vector<entity_t> pipelineGroupSequence;
         robin_hood::unordered_map<std::string, entity_t> nameIndex{};
 
-        robin_hood::unordered_map<component_id_t, void *> singletons;
+        std::unordered_map<component_id_t, void *> singletons;
 
         bool systemOrderDirty = true;
+
+        thread_local inline static System* activeSystem = nullptr;
+        thread_local inline static Query * activeQuery = nullptr;
 
     public:
         ArchetypeManager am;
@@ -476,4 +473,20 @@ namespace ecs
         std::set<component_id_t> with = {getComponentId<TArgs>()...};
         return createQuery(with);
     }
+
+    class ActiveSystem
+    {
+        World* world;
+    public:
+        ActiveSystem(World* w, System* s)
+            : world(w)
+        {
+            w->activeSystem = s;
+        }
+
+        ~ActiveSystem()
+        {
+            world->activeSystem = nullptr;
+        }
+    };
 }
