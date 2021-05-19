@@ -62,6 +62,7 @@ namespace ecs
         std::unordered_map<entity_t, uint32_t> labelPreCounts{};
 
         std::vector<systemid_t> systems{};
+        std::vector<systemid_t> executionSequence{};
     };
 
     struct System
@@ -89,6 +90,7 @@ namespace ecs
 
         component_id_t stream = 0;
         size_t count = 0;
+        float executionTime;
         //bool dirtyOrder = true;
     };
 

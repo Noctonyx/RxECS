@@ -423,6 +423,7 @@ namespace ecs
     {
         if (isAlive(sys)) {
             if (auto system = getUpdate<System>(sys); system) {
+                const auto start = std::chrono::high_resolution_clock::now();
                 ActiveSystem as(this, system);
 
                 if (system->query) {
@@ -443,6 +444,8 @@ namespace ecs
                     system->count = 1;
                     system->executeProcessor(this);
                 }
+                const auto end = std::chrono::high_resolution_clock::now();
+                system->executionTime = std::chrono::duration<float>(end - start).count();
             }
         }
     }
@@ -512,6 +515,7 @@ namespace ecs
             }
             sentinel = 0;
             executeSystem(entity);
+            grp->executionSequence.push_back(entity);
 
             for (auto & af: system->labels) {
                 labelCounts[af]--;
@@ -529,6 +533,7 @@ namespace ecs
     void World::executeSystemGroup(entity_t systemGroup)
     {
         auto gd = getUpdate<SystemGroup>(systemGroup);
+        gd->executionSequence.clear();
 
         float savedDelta = deltaTime_;
 
