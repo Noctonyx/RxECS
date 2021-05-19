@@ -102,8 +102,10 @@ namespace ecs
     {
         world->markSystemsDirty();
 
-        assert(q);
-        qb.withSingleton<TArgs ...>();
+        if (q) {
+            assert(q);
+            qb.withSingleton<TArgs ...>();
+        }
         return *this;
     }
 

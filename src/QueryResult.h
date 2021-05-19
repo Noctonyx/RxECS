@@ -63,6 +63,7 @@ namespace ecs
         World * world;
         QueryResult * result;
         Table * table;
+        std::unordered_map<component_id_t, Column *> columns;
 
     public:
         void checkIndex(uint32_t rowIndex) const;
@@ -76,6 +77,37 @@ namespace ecs
         std::span<const T> getColumn()
         {
             return table->columns[world->getComponentId<T>()]->getComponentData();
+        }
+
+        template <typename ... U>
+        std::array<Column *, sizeof...(U)> getColumns(
+            std::array<component_id_t, sizeof...(U)> comps)
+        {
+            std::array<Column *, sizeof...(U)> r;
+
+            std::transform(comps.begin(), comps.end(), r.begin(), [this](auto & comp) -> Column*
+            {
+                if (auto it = table->columns.find(comp); it == table->columns.end()) {
+                    return nullptr;
+                } else {
+                    return it->second;
+                }
+            });
+
+#if 0
+            uint32_t x = 0;
+            for(auto & c: comps) {
+                auto it = table->columns.find(c);
+
+                if(it == table->columns.end()) {
+                    r[x] = nullptr;
+                } else {
+                    r[x] = it->second;
+                }
+                x++;
+            }
+#endif
+            return r;
         }
 
         template <typename T>
@@ -202,14 +234,17 @@ namespace ecs
         template <typename Tuple, std::size_t I>
         void setResultValue(entity_t entity,
                             QueryResultChunk & chunk,
+                            Column * col,
                             Tuple & t,
                             const uint32_t row,
                             const component_id_t componentId,
                             bool mutate);
 
-        template <std::size_t Fixed, typename Tuple, typename Comps, typename Muts, std::size_t ... I>
+        template <std::size_t Fixed, typename Tuple, typename Comps, typename Muts, std::size_t ...
+                  I>
         void populateResult(entity_t entity,
                             QueryResultChunk & chunk,
+                            std::array<Column *, sizeof...(I)> columns,
                             Tuple & result,
                             Comps & comps,
                             Muts & muts,
@@ -223,12 +258,18 @@ namespace ecs
     template <typename Tuple, std::size_t I>
     void QueryResult::setResultValue(entity_t entity,
                                      QueryResultChunk & chunk,
+                                     Column * col,
                                      Tuple & t,
                                      const uint32_t row,
                                      const component_id_t componentId,
                                      bool mutate)
     {
-        void * result_ptr = checkTables(chunk, componentId, row, mutate);
+        void * result_ptr = nullptr;
+
+        if (col) {
+            std::get<I>(t) = static_cast<std::tuple_element_t<I, Tuple>>(col->getEntry(row));
+            return;
+        }
 
         if (!result_ptr) {
             result_ptr = checkRelations(chunk, row, componentId, mutate);
@@ -246,13 +287,16 @@ namespace ecs
     template <std::size_t Fixed, typename Tuple, typename Comps, typename Muts, std::size_t... I>
     void QueryResult::populateResult(entity_t entity,
                                      QueryResultChunk & chunk,
+                                     std::array<Column *, sizeof...(I)> columns,
                                      Tuple & result,
                                      Comps & comps,
                                      Muts & muts,
                                      const uint32_t row,
                                      std::index_sequence<I...>)
     {
-        (setResultValue<Tuple, I + Fixed>(entity, chunk, result, row, comps[I], muts[I + Fixed]), ...);
+        //chunk.checkIndex(row);
+        (setResultValue<Tuple, I + Fixed>(entity, chunk, columns[I], result, row, comps[I],
+                                          muts[I + Fixed]), ...);
     }
 
     template <typename ... U, typename Func>
@@ -268,10 +312,13 @@ namespace ecs
         //std::get<0>(result) = world;
 
         for (auto & chunk: *this) {
+
+            auto columns = chunk.getColumns<U...>(comps);
+
             for (auto row: chunk) {
-                std::get<0>(result) = EntityHandle{ chunk.entity(row), world };
+                std::get<0>(result) = EntityHandle{chunk.entity(row), world};
                 populateResult<std::tuple_size<decltype(result)>() - sizeof...(U)>(
-                    chunk.entity(row), chunk, result, comps, mp, row,
+                    chunk.entity(row), chunk, columns, result, comps, mp, row,
                     std::make_index_sequence<sizeof...(U)>()
                 );
                 std::apply(f, result);

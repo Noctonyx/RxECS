@@ -11,7 +11,7 @@ namespace ecs
 
     uint32_t QueryResultChunkRowIterator::operator*() const
     {
-        chunk->checkValidity();
+        //chunk->checkValidity();
         return row;
     }
 
@@ -24,7 +24,7 @@ namespace ecs
 
     entity_t QueryResultChunk::entity(uint32_t rowIndex) const
     {
-        checkValidity();
+        //checkValidity();
         checkIndex(rowIndex);
         return table->entities[rowIndex];
     }
@@ -43,8 +43,8 @@ namespace ecs
 
     void * QueryResultChunk::getUpdate(component_id_t comp, const uint32_t row) const
     {
-        checkValidity();
-        checkIndex(row);
+        //checkValidity();
+        //checkIndex(row);
         auto c = table->columns.find(comp);
         if (c == table->columns.end()) {
             return nullptr;
@@ -75,6 +75,15 @@ namespace ecs
             ch.world = world;
             ch.table = t;
             ch.result = this;
+            for (auto w : with) {
+                auto it = (t->columns.find(w));
+                if(it != t->columns.end()) {
+                    ch.columns[w] = it->second;
+                }
+
+                components.insert(w);
+            }
+
             total += static_cast<uint32_t>(t->entities.size());
 
             t->addQueryResult(this);
@@ -82,7 +91,6 @@ namespace ecs
         for (auto w: with) {
             components.insert(w);
         }
-
 
         for (auto& [c, v] : withRelations) {
             for (auto vx : v) {
