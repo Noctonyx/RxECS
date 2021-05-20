@@ -265,6 +265,12 @@ namespace ecs
 
         static std::string trimName(const char * n);
 
+    public:
+        [[nodiscard]] std::vector<entity_t> getPipelineGroupSequence() const
+        {
+            return pipelineGroupSequence;
+        }
+
     private:
         std::vector<EntityEntry> entities{};
 

@@ -445,7 +445,7 @@ namespace ecs
                     system->executeProcessor(this);
                 }
                 const auto end = std::chrono::high_resolution_clock::now();
-                system->executionTime = std::chrono::duration<float>(end - start).count();
+                system->executionTime = system->executionTime * 0.9f + 0.1f* std::chrono::duration<float>(end - start).count();
             }
         }
     }
