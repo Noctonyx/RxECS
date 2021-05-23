@@ -45,7 +45,7 @@ namespace ecs
     struct QueryResultChunkRowIterator
     {
         uint32_t row;
-        QueryResultChunk * chunk;
+        const QueryResultChunk * chunk;
 
         bool operator !=(const QueryResultChunkRowIterator & rhs) const
         {
@@ -63,6 +63,10 @@ namespace ecs
         World * world;
         QueryResult * result;
         Table * table;
+
+        size_t startRow;
+        size_t count;
+
         std::unordered_map<component_id_t, Column *> columns;
 
     public:
@@ -74,14 +78,14 @@ namespace ecs
         [[nodiscard]] void * getUpdate(component_id_t comp, uint32_t row) const;
 
         template <typename T>
-        std::span<const T> getColumn()
+        std::span<const T> getColumn() const
         {
             return table->columns[world->getComponentId<T>()]->getComponentData();
         }
 
         template <typename ... U>
         std::array<Column *, sizeof...(U)> getColumns(
-            std::array<component_id_t, sizeof...(U)> comps)
+            std::array<component_id_t, sizeof...(U)> comps) const
         {
             std::array<Column *, sizeof...(U)> r;
 
@@ -111,29 +115,29 @@ namespace ecs
         }
 
         template <typename T>
-        const T * get(const uint32_t row)
+        const T * get(const uint32_t row) const
         {
             return static_cast<const T *>(get(world->getComponentId<T>(), row));
         }
 
         template <typename T>
-        T * getUpdate(const uint32_t row)
+        T * getUpdate(const uint32_t row) const
         {
             return static_cast<T *>(getUpdate(world->getComponentId<T>(), row));
         }
 
         template <typename T> //, typename U, typename=std::enable_if_t<!std::is_const<U>::value>>
-        T * rowComponent(const uint32_t row)
+        T * rowComponent(const uint32_t row) const
         {
             return getUpdate<T>(row);
         }
 
-        QueryResultChunkRowIterator begin()
+        [[nodiscard]] QueryResultChunkRowIterator begin() const
         {
             return QueryResultChunkRowIterator{0, this};
         }
 
-        QueryResultChunkRowIterator end()
+        [[nodiscard]] QueryResultChunkRowIterator end() const
         {
             return QueryResultChunkRowIterator{static_cast<uint32_t>(table->entities.size()), this};
         }
@@ -142,7 +146,7 @@ namespace ecs
     struct QueryResultChunkIterator
     {
         uint32_t row;
-        QueryResult * result;
+        const QueryResult * result;
 
         bool operator !=(const QueryResultChunkIterator & rhs) const
         {
@@ -154,7 +158,7 @@ namespace ecs
             row++;
         }
 
-        QueryResultChunk & operator*() const;
+        const QueryResultChunk & operator*() const;
     };
 
     struct QueryResult
@@ -189,12 +193,12 @@ namespace ecs
             return total;
         }
 
-        QueryResultChunkIterator begin()
+        [[nodiscard]] QueryResultChunkIterator begin() const
         {
             return QueryResultChunkIterator{0, this};
         }
 
-        QueryResultChunkIterator end()
+        [[nodiscard]] QueryResultChunkIterator end() const
         {
             return QueryResultChunkIterator{static_cast<uint32_t>(chunks.size()), this};
         }
@@ -210,7 +214,7 @@ namespace ecs
         }
 
         template <typename Func>
-        void iter(Func && f)
+        void iter(Func && f) const
         {
             for (auto & ch: *this) {
                 f(world, ch);
@@ -222,47 +226,53 @@ namespace ecs
                            uint32_t row,
                            bool mutate);
         void * checkSingletons(component_id_t componentId, bool mutate) const;
-        void * checkRelations(QueryResultChunk & chunk,
+        void * checkRelations(const QueryResultChunk & chunk,
                               uint32_t row,
                               component_id_t componentId,
-                              bool mutate);
+                              bool mutate) const;
 
         const void * checkInstancing(entity_t entity,
                                      component_id_t componentId,
-                                     bool mutate);
+                                     bool mutate) const;
 
         template <typename Tuple, std::size_t I>
         void setResultValue(entity_t entity,
-                            QueryResultChunk & chunk,
+                            const QueryResultChunk & chunk,
                             Column * col,
                             Tuple & t,
                             const uint32_t row,
                             const component_id_t componentId,
-                            bool mutate);
+                            bool mutate) const;
 
         template <std::size_t Fixed, typename Tuple, typename Comps, typename Muts, std::size_t ...
                   I>
         void populateResult(entity_t entity,
-                            QueryResultChunk & chunk,
+                            const QueryResultChunk & chunk,
                             std::array<Column *, sizeof...(I)> columns,
                             Tuple & result,
                             Comps & comps,
                             Muts & muts,
                             const uint32_t row,
-                            std::index_sequence<I...>);
+                            std::index_sequence<I...>) const;
 
         template <typename ... U, typename Func>
-        void each(Func && f);
+        void each(Func && f) const;
+
+        template <typename ... U, typename Func>
+        void eachChunk(Func && f,
+                       const std::array<component_id_t, sizeof...(U)> & comps,
+                       const std::array<bool, sizeof...(U) + 1> & mp,
+                       const QueryResultChunk & chunk) const;
     };
 
     template <typename Tuple, std::size_t I>
     void QueryResult::setResultValue(entity_t entity,
-                                     QueryResultChunk & chunk,
+                                     const QueryResultChunk & chunk,
                                      Column * col,
                                      Tuple & t,
                                      const uint32_t row,
                                      const component_id_t componentId,
-                                     bool mutate)
+                                     bool mutate) const
     {
         void * result_ptr = nullptr;
 
@@ -284,15 +294,16 @@ namespace ecs
         std::get<I>(t) = static_cast<std::tuple_element_t<I, Tuple>>(result_ptr);
     }
 
-    template <std::size_t Fixed, typename Tuple, typename Comps, typename Muts, std::size_t... I>
+    template <std::size_t Fixed, typename Tuple, typename Comps, typename Muts, std::size_t...
+              I>
     void QueryResult::populateResult(entity_t entity,
-                                     QueryResultChunk & chunk,
+                                     const QueryResultChunk & chunk,
                                      std::array<Column *, sizeof...(I)> columns,
                                      Tuple & result,
                                      Comps & comps,
                                      Muts & muts,
                                      const uint32_t row,
-                                     std::index_sequence<I...>)
+                                     std::index_sequence<I...>) const
     {
         //chunk.checkIndex(row);
         (setResultValue<Tuple, I + Fixed>(entity, chunk, columns[I], result, row, comps[I],
@@ -300,29 +311,37 @@ namespace ecs
     }
 
     template <typename ... U, typename Func>
-    void QueryResult::each(Func && f)
+    void QueryResult::eachChunk(Func && f,
+                                const std::array<component_id_t, sizeof...(U)> & comps,
+                                const std::array<bool, sizeof...(U) + 1> & mp,
+                                const QueryResultChunk & chunk) const
+    {
+        auto columns = chunk.getColumns<U...>(comps);
+
+        for(size_t row = chunk.startRow; row < chunk.count + chunk.startRow; row++){
+            std::tuple<EntityHandle, U *...> result;
+            std::get<0>(result) = EntityHandle{chunk.entity(row), world};
+            populateResult<std::tuple_size<decltype(result)>() - sizeof...(U)>(
+                chunk.entity(row), chunk, columns, result, comps, mp, row,
+                std::make_index_sequence<sizeof...(U)>()
+            );
+            std::apply(f, result);
+        }
+    }
+
+    template <typename ... U, typename Func>
+    void QueryResult::each(Func && f) const
     {
         std::array<component_id_t, sizeof...(U)> comps = {
             world->getComponentId<std::remove_const_t<U>>()...
         };
         auto mp = get_mutable_parameters(f);
 
-        std::tuple<EntityHandle, U *...> result;
-
         //std::get<0>(result) = world;
 
         for (auto & chunk: *this) {
 
-            auto columns = chunk.getColumns<U...>(comps);
-
-            for (auto row: chunk) {
-                std::get<0>(result) = EntityHandle{chunk.entity(row), world};
-                populateResult<std::tuple_size<decltype(result)>() - sizeof...(U)>(
-                    chunk.entity(row), chunk, columns, result, comps, mp, row,
-                    std::make_index_sequence<sizeof...(U)>()
-                );
-                std::apply(f, result);
-            }
+            eachChunk<U...>(f, comps, mp, chunk);
         }
     }
 }

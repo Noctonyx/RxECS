@@ -53,9 +53,9 @@ namespace ecs
         return (*c).second->getEntry(row);
     }
 
-    QueryResultChunk & QueryResultChunkIterator::operator*() const
+    const QueryResultChunk & QueryResultChunkIterator::operator*() const
     {
-        return result->chunks[row];
+        return result->chunks.at(row);
     }
 
     QueryResult::QueryResult(
@@ -71,19 +71,24 @@ namespace ecs
     {
         total = 0;
         for (auto t: tableList) {
-            auto & ch = chunks.emplace_back();
-            ch.world = world;
-            ch.table = t;
-            ch.result = this;
-            for (auto w : with) {
-                auto it = (t->columns.find(w));
-                if(it != t->columns.end()) {
-                    ch.columns[w] = it->second;
+            size_t st = 0;
+            while (st < t->entities.size()) {
+                auto& ch = chunks.emplace_back();
+                ch.world = world;
+                ch.table = t;
+                ch.result = this;
+                ch.startRow = st;
+                ch.count = std::min(t->entities.size() - st, 512ULL);
+                for (auto w : with) {
+                    auto it = (t->columns.find(w));
+                    if (it != t->columns.end()) {
+                        ch.columns[w] = it->second;
+                    }
+
+                    components.insert(w);
                 }
-
-                components.insert(w);
+                st += ch.count;
             }
-
             total += static_cast<uint32_t>(t->entities.size());
 
             t->addQueryResult(this);
@@ -145,10 +150,10 @@ namespace ecs
         return nullptr;
     }
 
-    void * QueryResult::checkRelations(QueryResultChunk & chunk,
+    void * QueryResult::checkRelations(const QueryResultChunk & chunk,
                                        const uint32_t row,
                                        const component_id_t componentId,
-                                       bool mutate)
+                                       bool mutate) const
     {
         auto it = relationLookup.find(componentId);
         if(it == relationLookup.end()) {
@@ -180,7 +185,7 @@ namespace ecs
 
     const void * QueryResult::checkInstancing(entity_t entity,
                                               const component_id_t componentId,
-                                              bool mutate)
+                                              bool mutate) const
     {
         (void) mutate;
         if (world->has<InstanceOf>(entity)) {

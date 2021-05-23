@@ -209,7 +209,7 @@ TEST_SUITE("Queries")
         {
             auto r = w.getResults(q1);
             r.iter(
-                [](ecs::World * w, ecs::QueryResultChunk & ch)
+                [](ecs::World * w, const ecs::QueryResultChunk & ch)
                 {
                     for (auto r: ch) {
                         auto e = ch.entity(r);
