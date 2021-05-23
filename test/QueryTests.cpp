@@ -177,10 +177,10 @@ TEST_SUITE("Queries")
         auto q1 = w.createQuery<TestComponent>().id;
         {
             auto r = w.getResults(q1);
-            for (auto & chunk: r) {
-                for (auto row: chunk) {
-                    CHECK(chunk.entity(row) == x.id);
-                    auto c1 = chunk.getUpdate<TestComponent>(row);
+            for (auto & view: r) {
+                for (auto row: view) {
+                    CHECK(view.entity(row) == x.id);
+                    auto c1 = view.getUpdate<TestComponent>(row);
                     CHECK(c1->x == 2);
                     c1->x = 3;
                 }
@@ -209,7 +209,7 @@ TEST_SUITE("Queries")
         {
             auto r = w.getResults(q1);
             r.iter(
-                [](ecs::World * w, const ecs::QueryResultChunk & ch)
+                [](ecs::World * w, const ecs::TableView & ch)
                 {
                     for (auto r: ch) {
                         auto e = ch.entity(r);

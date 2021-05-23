@@ -2,49 +2,45 @@
 
 namespace ecs
 {
-    QueryResultChunkRowIterator & QueryResultChunkRowIterator::operator++()
+    TableViewRowIterator & TableViewRowIterator::operator++()
     {
-        chunk->checkValidity();
+        view->checkValidity();
         row++;
         return *this;
     }
 
-    uint32_t QueryResultChunkRowIterator::operator*() const
+    size_t TableViewRowIterator::operator*() const
     {
-        //chunk->checkValidity();
         return row;
     }
 
-    void QueryResultChunk::checkIndex(uint32_t rowIndex) const
+    void TableView::checkIndex(uint32_t rowIndex) const
     {
-        if (rowIndex > table->entities.size()) {
+        if (rowIndex >= startRow + count || rowIndex < startRow) {
             throw std::range_error("row out of range");
         }
     }
 
-    entity_t QueryResultChunk::entity(uint32_t rowIndex) const
+    entity_t TableView::entity(uint32_t rowIndex) const
     {
-        //checkValidity();
         checkIndex(rowIndex);
         return table->entities[rowIndex];
     }
 
-    const void * QueryResultChunk::get(component_id_t comp, const uint32_t row) const
+    const void * TableView::get(component_id_t comp, const uint32_t row) const
     {
         return getUpdate(comp, row);
     }
 
-    void QueryResultChunk::checkValidity() const
+    void TableView::checkValidity() const
     {
         if (tableUpdateTimestamp != table->lastUpdateTimestamp) {
             throw std::runtime_error("Invalidated query results");
         }
     }
 
-    void * QueryResultChunk::getUpdate(component_id_t comp, const uint32_t row) const
+    void * TableView::getUpdate(component_id_t comp, const uint32_t row) const
     {
-        //checkValidity();
-        //checkIndex(row);
         auto c = table->columns.find(comp);
         if (c == table->columns.end()) {
             return nullptr;
@@ -53,9 +49,9 @@ namespace ecs
         return (*c).second->getEntry(row);
     }
 
-    const QueryResultChunk & QueryResultChunkIterator::operator*() const
+    const TableView & TableViewIterator::operator*() const
     {
-        return result->chunks.at(row);
+        return result->tableViews.at(row);
     }
 
     QueryResult::QueryResult(
@@ -73,7 +69,7 @@ namespace ecs
         for (auto t: tableList) {
             size_t st = 0;
             while (st < t->entities.size()) {
-                auto& ch = chunks.emplace_back();
+                auto& ch = tableViews.emplace_back();
                 ch.world = world;
                 ch.table = t;
                 ch.tableUpdateTimestamp = t->lastUpdateTimestamp;
@@ -99,11 +95,9 @@ namespace ecs
         for (auto r: withSingletons) {
             singletons.insert(r);
         }
-
-        valid = true;
     }
 
-    void * QueryResult::checkTables(QueryResultChunk & chunk,
+    void * QueryResult::checkTables(TableView & view,
                                     const component_id_t componentId,
                                     const uint32_t row,
                                     bool mutate)
@@ -111,9 +105,9 @@ namespace ecs
         void * ptr;
 
         if (mutate) {
-            ptr = chunk.getUpdate(componentId, row);
+            ptr = view.getUpdate(componentId, row);
         } else {
-            ptr = const_cast<void *>(chunk.get(componentId, row));
+            ptr = const_cast<void *>(view.get(componentId, row));
         }
 
         return ptr;
@@ -132,7 +126,7 @@ namespace ecs
         return nullptr;
     }
 
-    void * QueryResult::checkRelations(const QueryResultChunk & chunk,
+    void * QueryResult::checkRelations(const TableView & view,
                                        const uint32_t row,
                                        const component_id_t componentId,
                                        bool mutate) const
@@ -143,7 +137,7 @@ namespace ecs
         }
         auto relation = it->second;
 
-        const auto relation_ptr = chunk.get(relation, row);
+        const auto relation_ptr = view.get(relation, row);
         if (relation_ptr) {
             auto rp = static_cast<const Relation*>(relation_ptr);
             if (!world->isAlive(rp->entity)) {
