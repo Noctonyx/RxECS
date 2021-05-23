@@ -36,7 +36,7 @@ namespace ecs
 
     void QueryResultChunk::checkValidity() const
     {
-        if (!result->valid) {
+        if (tableUpdateTimestamp != table->lastUpdateTimestamp) {
             throw std::runtime_error("Invalidated query results");
         }
     }
@@ -76,22 +76,15 @@ namespace ecs
                 auto& ch = chunks.emplace_back();
                 ch.world = world;
                 ch.table = t;
-                ch.result = this;
+                ch.tableUpdateTimestamp = t->lastUpdateTimestamp;
                 ch.startRow = st;
                 ch.count = std::min(t->entities.size() - st, 512ULL);
                 for (auto w : with) {
-                    auto it = (t->columns.find(w));
-                    if (it != t->columns.end()) {
-                        ch.columns[w] = it->second;
-                    }
-
                     components.insert(w);
                 }
                 st += ch.count;
             }
             total += static_cast<uint32_t>(t->entities.size());
-
-            t->addQueryResult(this);
         }
         for (auto w: with) {
             components.insert(w);
@@ -103,22 +96,11 @@ namespace ecs
             }
         }
 
-//        for (const auto& r: withRelations) {
-  //          relations.insert(r);
-    //    }
-
         for (auto r: withSingletons) {
             singletons.insert(r);
         }
 
         valid = true;
-    }
-
-    QueryResult::~QueryResult()
-    {
-        for (auto t: chunks) {
-            t.table->removeQueryResult(this);
-        }
     }
 
     void * QueryResult::checkTables(QueryResultChunk & chunk,

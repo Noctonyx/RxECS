@@ -61,13 +61,11 @@ namespace ecs
         friend struct QueryResult;
     private:
         World * world;
-        QueryResult * result;
         Table * table;
+        Timestamp tableUpdateTimestamp;
 
         size_t startRow;
         size_t count;
-
-        std::unordered_map<component_id_t, Column *> columns;
 
     public:
         void checkIndex(uint32_t rowIndex) const;
@@ -85,7 +83,7 @@ namespace ecs
 
         template <typename ... U>
         std::array<Column *, sizeof...(U)> getColumns(
-            std::array<component_id_t, sizeof...(U)> comps) const
+            const std::array<component_id_t, sizeof...(U)> & comps) const
         {
             std::array<Column *, sizeof...(U)> r;
 
@@ -94,23 +92,10 @@ namespace ecs
                 if (auto it = table->columns.find(comp); it == table->columns.end()) {
                     return nullptr;
                 } else {
-                    return it->second;
+                    return it->second.get();
                 }
             });
 
-#if 0
-            uint32_t x = 0;
-            for(auto & c: comps) {
-                auto it = table->columns.find(c);
-
-                if(it == table->columns.end()) {
-                    r[x] = nullptr;
-                } else {
-                    r[x] = it->second;
-                }
-                x++;
-            }
-#endif
             return r;
         }
 
@@ -126,7 +111,7 @@ namespace ecs
             return static_cast<T *>(getUpdate(world->getComponentId<T>(), row));
         }
 
-        template <typename T> //, typename U, typename=std::enable_if_t<!std::is_const<U>::value>>
+        template <typename T>
         T * rowComponent(const uint32_t row) const
         {
             return getUpdate<T>(row);
@@ -185,8 +170,6 @@ namespace ecs
                     const std::set<component_id_t> & singletons,
                     bool inheritance
         );
-
-        ~QueryResult();
 
         [[nodiscard]] uint32_t count() const
         {

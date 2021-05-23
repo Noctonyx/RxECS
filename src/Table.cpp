@@ -11,18 +11,8 @@ namespace ecs
     {
         auto at = world->am.getArchetypeDetails(archetypeId);
         for (auto & componentId: at.components) {
-            auto c = new Column(componentId, world);
-            columns.emplace(componentId, c);
+            columns.emplace(componentId, std::make_unique<Column>(componentId, world));
         }
-    }
-
-    Table::~Table()
-    {
-        entities.clear();
-        for (auto & [k, v]: columns) {
-            delete v;
-        }
-        columns.clear();
     }
 
     TableIterator Table::begin()
@@ -43,6 +33,7 @@ namespace ecs
         for (auto & [k, v]: columns) {
             v->addEntry();
         }
+        stampUpdateTime();
     }
 
     void Table::removeEntity(entity_t id)
@@ -58,6 +49,7 @@ namespace ecs
         world->entities[index(last_entity)].row = row;
 
         entities.pop_back();
+        stampUpdateTime();
     }
 
     const void * Table::getComponent(entity_t id, component_id_t componentId)
@@ -68,7 +60,7 @@ namespace ecs
             return nullptr;
         }
         const uint32_t row = getEntityRow(id);
-        Column * c = it->second;
+        auto & c = it->second;
 
         return c->getEntry(row);
     }
@@ -79,7 +71,7 @@ namespace ecs
             return nullptr;
         }
         const uint32_t row = getEntityRow(id);
-        Column * c = columns[componentId];
+        auto & c = columns[componentId];
 
         return c->getEntry(row);
     }
@@ -87,32 +79,15 @@ namespace ecs
     void Table::setComponent(entity_t id, component_id_t componentId, const void * ptr)
     {
         const uint32_t row = getEntityRow(id);
-        Column * c = columns[componentId];
+        auto & c = columns[componentId];
 
         c->setEntry(row, ptr);
-    }
-
-    void Table::addQueryResult(QueryResult * i)
-    {
-        results.insert(i);
-    }
-
-    void Table::removeQueryResult(QueryResult * i)
-    {
-        results.erase(i);
-    }
-
-    void Table::invalidateQueryResults()
-    {
-        for (auto i: results) {
-            i->valid = false;
-        }
     }
 
     std::string Table::description() const
     {
         std::string r = "";
-        for(auto [x, y]: columns) {
+        for(auto & [x, y]: columns) {
             if(r != "") {
                 r += "|";
             }
@@ -138,8 +113,6 @@ namespace ecs
         const auto source_row = fromTable->getEntityRow(id);
 
         auto new_index = static_cast<uint32_t>(toTable->entities.size());
-        fromTable->invalidateQueryResults();
-        toTable->invalidateQueryResults();
 
         world->entities[index(id)].row = new_index;
         toTable->entities.push_back(id);
@@ -165,12 +138,13 @@ namespace ecs
             world->entities[index(last_entity)].row = source_row;
         }
         fromTable->entities.pop_back();
+        fromTable->stampUpdateTime();
+        toTable->stampUpdateTime();
     }
 
     void Table::copyEntity(World * world,
-        Table * fromTable,
-        Table * toTable,
-     
+        const Table * fromTable,
+        Table * toTable,     
         entity_t id,
         entity_t newEntity,
         const ArchetypeTransition & trans)
@@ -178,7 +152,6 @@ namespace ecs
         const auto source_row = fromTable->getEntityRow(id);
 
         auto new_index = static_cast<uint32_t>(toTable->entities.size());
-        toTable->invalidateQueryResults();
 
         world->entities[index(newEntity)].row = new_index;
         toTable->entities.push_back(newEntity);
@@ -188,8 +161,9 @@ namespace ecs
         }
 
         for (auto& e : trans.preserveComponents) {
-            const auto ptr1 = fromTable->columns[e]->getEntry(source_row);
+            const auto ptr1 = fromTable->columns.at(e)->getEntry(source_row);
             toTable->columns[e]->addCopyEntry(ptr1);
         }
+        toTable->stampUpdateTime();
     }
 }

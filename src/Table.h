@@ -4,6 +4,8 @@
 #include "ArchetypeManager.h"
 #include "Entity.h"
 //#include "EntityHandle.h"
+#include <chrono>
+
 #include "robin_hood.h"
 #include "TableIterator.h"
 
@@ -14,17 +16,19 @@ namespace ecs
     class World;
     struct Column;
 
+    using Timestamp = std::chrono::time_point<std::chrono::steady_clock>;
+
     struct Table
     {
         World * world;
         uint32_t archetypeId;
         std::vector<entity_t> entities;
-        std::set<QueryResult *> results;
 
-        robin_hood::unordered_map<component_id_t, Column *> columns;
+        Timestamp lastUpdateTimestamp;
+
+        robin_hood::unordered_map<component_id_t, std::unique_ptr<Column>> columns;
 
         Table(World * world, uint16_t archetypeId);
-        ~Table();
 
         TableIterator begin();
         TableIterator end();
@@ -36,10 +40,6 @@ namespace ecs
         void * getUpdateComponent(entity_t id, component_id_t componentId);
         void setComponent(entity_t id, component_id_t componentId, const void * ptr);
 
-        void addQueryResult(QueryResult * i);
-        void removeQueryResult(QueryResult * i);
-        void invalidateQueryResults();
-
         std::string description() const;
 
         uint32_t getEntityRow(entity_t id) const;
@@ -50,11 +50,16 @@ namespace ecs
                                const ArchetypeTransition & trans);
 
         static void copyEntity(World * world,
-                               Table * fromTable,
+                               const Table * fromTable,
                                Table * toTable,
                                //Table * existingTable,
                                entity_t id,
                                entity_t newEntity,
                                const ArchetypeTransition & trans);
+
+        void stampUpdateTime()
+        {
+            lastUpdateTimestamp = std::chrono::high_resolution_clock::now();
+        }
     };
 }
