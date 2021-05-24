@@ -70,13 +70,14 @@ namespace ecs
         total = 0;
         for (auto t: tableList) {
             size_t st = 0;
+            size_t cs = std::max(t->entities.size() / 40, 1024ULL);
             while (st < t->entities.size()) {
                 auto& ch = tableViews.emplace_back();
                 ch.world = world;
                 ch.table = t;
                 ch.tableUpdateTimestamp = t->lastUpdateTimestamp;
                 ch.startRow = st;
-                ch.count = std::min(t->entities.size() - st, 1024ULL);
+                ch.count = std::min(t->entities.size() - st, cs);
                 for (auto w : with) {
                     components.insert(w);
                 }
