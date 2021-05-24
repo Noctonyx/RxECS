@@ -1,4 +1,5 @@
 #pragma once
+#include <mutex>
 #include <vector>
 #include <set>
 #include <typeinfo>
@@ -301,6 +302,8 @@ namespace ecs
 
         thread_local inline static System* activeSystem = nullptr;
         thread_local inline static Query * activeQuery = nullptr;
+
+        std::mutex deferredMutex;
 
     public:
         ArchetypeManager am;

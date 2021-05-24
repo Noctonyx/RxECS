@@ -28,5 +28,7 @@ namespace ecs
         QueryBuilder& withSingleton();
 
         QueryBuilder& withInheritance(bool inherit);
+
+        QueryBuilder& withJob();
     };
 }

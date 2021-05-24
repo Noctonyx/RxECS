@@ -60,10 +60,12 @@ namespace ecs
         const std::set<component_id_t> & with,
         const std::set<std::pair<component_id_t, std::set<component_id_t>>> & withRelations,
         const std::set<component_id_t> & withSingletons,
-        bool inherit
+        bool inherit,
+        bool thread
     )
         : world(world)
         , inheritance(inherit)
+        , thread(thread)
     {
         total = 0;
         for (auto t: tableList) {
@@ -74,7 +76,7 @@ namespace ecs
                 ch.table = t;
                 ch.tableUpdateTimestamp = t->lastUpdateTimestamp;
                 ch.startRow = st;
-                ch.count = std::min(t->entities.size() - st, 512ULL);
+                ch.count = std::min(t->entities.size() - st, 1024ULL);
                 for (auto w : with) {
                     components.insert(w);
                 }

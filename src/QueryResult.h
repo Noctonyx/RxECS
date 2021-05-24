@@ -8,6 +8,8 @@
 #include "Entity.h"
 #include "Table.h"
 
+#include "Jobs/JobManager.hpp"
+
 template <class T>
 concept mutable_parameter = (std::is_reference_v<T> || std::is_pointer_v<T>)
 && !std::is_const_v<std::remove_reference_t<std::remove_pointer_t<T>>>;
@@ -158,6 +160,7 @@ namespace ecs
         robin_hood::unordered_map<component_id_t, component_id_t> relationLookup;
         std::set<component_id_t> singletons;
         bool inheritance;
+        bool thread;
 
     public:
         uint32_t total;
@@ -168,7 +171,8 @@ namespace ecs
                     const std::set<component_id_t> & with,
                     const std::set<std::pair<component_id_t, std::set<component_id_t>>> & relations,
                     const std::set<component_id_t> & singletons,
-                    bool inheritance
+                    bool inheritance,
+                    bool thread
         );
 
         [[nodiscard]] uint32_t count() const
@@ -243,9 +247,9 @@ namespace ecs
 
         template <typename ... U, typename Func>
         void eachView(Func && f,
-                       const std::array<component_id_t, sizeof...(U)> & comps,
-                       const std::array<bool, sizeof...(U) + 1> & mp,
-                       const TableView & view) const;
+                      const std::array<component_id_t, sizeof...(U)> & comps,
+                      const std::array<bool, sizeof...(U) + 1> & mp,
+                      const TableView & view) const;
     };
 
     template <typename Tuple, std::size_t I>
@@ -294,14 +298,14 @@ namespace ecs
 
     template <typename ... U, typename Func>
     void QueryResult::eachView(Func && f,
-                                const std::array<component_id_t, sizeof...(U)> & comps,
-                                const std::array<bool, sizeof...(U) + 1> & mp,
-                                const TableView & view) const
+                               const std::array<component_id_t, sizeof...(U)> & comps,
+                               const std::array<bool, sizeof...(U) + 1> & mp,
+                               const TableView & view) const
     {
         auto columns = view.getColumns<U...>(comps);
 
-        for(auto row: view) {
-        //for(size_t row = view.startRow; row < view.count + view.startRow; row++){
+        for (auto row: view) {
+            //for(size_t row = view.startRow; row < view.count + view.startRow; row++){
             std::tuple<EntityHandle, U *...> result;
             std::get<0>(result) = EntityHandle{view.entity(row), world};
             populateResult<std::tuple_size<decltype(result)>() - sizeof...(U)>(
@@ -320,9 +324,28 @@ namespace ecs
         };
         auto mp = get_mutable_parameters(f);
 
-        for (auto & view: *this) {
+        if (thread) {
+            std::vector<std::shared_ptr<RxCore::Job<void>>> jobs;
 
-            eachView<U...>(f, comps, mp, view);
+            for (auto & view: *this) {
+                auto j = RxCore::CreateJob<void>([=]()
+                    {
+                        eachView<U...>(f, comps, mp, view);
+                    }
+                );
+                j->schedule();
+                jobs.push_back(j);
+            }
+
+            for (auto & jj: jobs) {
+                jj->waitComplete();
+            }
+
+            jobs.clear();
+        } else {
+            for (auto & view: *this) {
+                eachView<U...>(f, comps, mp, view);
+            }
         }
     }
 }
