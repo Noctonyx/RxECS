@@ -172,6 +172,7 @@ namespace ecs
 
     void World::destroyDeferred(const entity_t id)
     {
+        std::lock_guard guard(deferredMutex);
         deferredCommands.push_back({DeferredCommandType::Destroy, id, 0, nullptr});
     }
 
@@ -187,6 +188,7 @@ namespace ecs
 
     void World::addDeferred(const entity_t id, const component_id_t componentId)
     {
+        std::lock_guard guard(deferredMutex);
         deferredCommands.push_back({DeferredCommandType::Add, id, componentId, nullptr});
     }
 
@@ -216,6 +218,7 @@ namespace ecs
 
     void World::removeDeferred(entity_t id, component_id_t componentId)
     {
+        std::lock_guard guard(deferredMutex);
         deferredCommands.push_back({DeferredCommandType::Remove, id, componentId, nullptr});
     }
 
@@ -280,6 +283,7 @@ namespace ecs
 
     void World::setDeferred(entity_t id, component_id_t componentId, void * ptr)
     {
+        std::lock_guard guard(deferredMutex);
         deferredCommands.push_back({DeferredCommandType::Set, id, componentId, ptr});
     }
 
@@ -416,14 +420,25 @@ namespace ecs
         auto aq = get<Query>(q);
 
         return QueryResult(this, aq->tables, aq->with, aq->relations, aq->singleton,
-                           aq->inheritamce);
+                           aq->inheritance, aq->thread);
     }
 
     void World::executeSystem(systemid_t sys)
     {
         if (isAlive(sys)) {
+#if 0
+            auto name = get<Name>(sys);
+            const char* n;
+            if(name) {
+                n = name->name.c_str();
+            } else {
+                n = "System";
+            }
+#endif
+            OPTICK_EVENT("ExecuteSystem")
+
             if (auto system = getUpdate<System>(sys); system) {
-                const auto start = std::chrono::high_resolution_clock::now();
+                const auto start = std::chrono::high_resolution_clock::now();                
                 ActiveSystem as(this, system);
 
                 if (system->query) {

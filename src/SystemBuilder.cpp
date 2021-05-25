@@ -85,11 +85,13 @@ namespace ecs
     SystemBuilder & SystemBuilder::withJob()
     {
         world->markSystemsDirty();
-
+        /*
         auto sp = world->getUpdate<System>(id);
 
         sp->thread = true;
-
+        */
+        assert(q);
+        qb.withJob();
         return *this;
     }
 }

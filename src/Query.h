@@ -16,7 +16,8 @@ namespace ecs
         std::set<std::pair<component_id_t, std::set<component_id_t>>> relations{};
         std::unordered_map<component_id_t, component_id_t> relationLookup;
 
-        bool inheritamce = false;
+        bool inheritance = false;
+        bool thread = false;
 
         std::vector<Table *> tables{};
 

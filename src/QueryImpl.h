@@ -84,8 +84,15 @@ namespace ecs
     inline QueryBuilder & QueryBuilder::withInheritance(bool inherit)
     {
         auto qp = world->getUpdate<Query>(id);
-        qp->inheritamce = inherit;
+        qp->inheritance = inherit;
 
+        return *this;
+    }
+
+    inline QueryBuilder & QueryBuilder::withJob()
+    {
+        auto qp = world->getUpdate<Query>(id);
+        qp->thread = true;
         return *this;
     }
 }

@@ -8,6 +8,8 @@
 #include "Entity.h"
 #include "Table.h"
 
+#include "Jobs/JobManager.hpp"
+
 template <class T>
 concept mutable_parameter = (std::is_reference_v<T> || std::is_pointer_v<T>)
 && !std::is_const_v<std::remove_reference_t<std::remove_pointer_t<T>>>;
@@ -38,34 +40,34 @@ constexpr auto get_mutable_parameters(T)
 
 namespace ecs
 {
-    struct QueryResultChunk;
+    struct TableView;
     struct QueryResult;
 
 
-    struct QueryResultChunkRowIterator
+    struct TableViewRowIterator
     {
-        uint32_t row;
-        const QueryResultChunk * chunk;
+        size_t row;
+        const TableView * view;
 
-        bool operator !=(const QueryResultChunkRowIterator & rhs) const
+        bool operator !=(const TableViewRowIterator & rhs) const
         {
             return row != rhs.row;
         }
 
-        QueryResultChunkRowIterator & operator++();
-        uint32_t operator*() const;
+        TableViewRowIterator & operator++();
+        size_t operator*() const;
     };
 
-    struct QueryResultChunk
+    struct TableView
     {
         friend struct QueryResult;
     private:
-        World * world;
-        Table * table;
+        World * world{};
+        Table * table{};
         Timestamp tableUpdateTimestamp;
 
-        size_t startRow;
-        size_t count;
+        size_t startRow{};
+        size_t count{};
 
     public:
         void checkIndex(uint32_t rowIndex) const;
@@ -117,23 +119,23 @@ namespace ecs
             return getUpdate<T>(row);
         }
 
-        [[nodiscard]] QueryResultChunkRowIterator begin() const
+        [[nodiscard]] TableViewRowIterator begin() const
         {
-            return QueryResultChunkRowIterator{0, this};
+            return TableViewRowIterator{startRow, this};
         }
 
-        [[nodiscard]] QueryResultChunkRowIterator end() const
+        [[nodiscard]] TableViewRowIterator end() const
         {
-            return QueryResultChunkRowIterator{static_cast<uint32_t>(table->entities.size()), this};
+            return TableViewRowIterator{startRow + count, this};
         }
     };
 
-    struct QueryResultChunkIterator
+    struct TableViewIterator
     {
         uint32_t row;
         const QueryResult * result;
 
-        bool operator !=(const QueryResultChunkIterator & rhs) const
+        bool operator !=(const TableViewIterator & rhs) const
         {
             return row != rhs.row;
         }
@@ -143,32 +145,34 @@ namespace ecs
             row++;
         }
 
-        const QueryResultChunk & operator*() const;
+        const TableView & operator*() const;
     };
 
     struct QueryResult
     {
-        friend struct QueryResultChunkIterator;
+        friend struct TableViewIterator;
 
     private:
         World * world;
         std::set<component_id_t> components;
-        std::vector<QueryResultChunk> chunks;
+        std::vector<TableView> tableViews;
         //std::set<std::pair<component_id_t, std::set<component_id_t>>> relations;
         robin_hood::unordered_map<component_id_t, component_id_t> relationLookup;
         std::set<component_id_t> singletons;
         bool inheritance;
+        bool thread;
 
     public:
         uint32_t total;
-        bool valid;
+        //bool valid;
 
         QueryResult(World * world,
                     const std::vector<Table *> & tableList,
                     const std::set<component_id_t> & with,
                     const std::set<std::pair<component_id_t, std::set<component_id_t>>> & relations,
                     const std::set<component_id_t> & singletons,
-                    bool inheritance
+                    bool inheritance,
+                    bool thread
         );
 
         [[nodiscard]] uint32_t count() const
@@ -176,24 +180,24 @@ namespace ecs
             return total;
         }
 
-        [[nodiscard]] QueryResultChunkIterator begin() const
+        [[nodiscard]] TableViewIterator begin() const
         {
-            return QueryResultChunkIterator{0, this};
+            return TableViewIterator{0, this};
         }
 
-        [[nodiscard]] QueryResultChunkIterator end() const
+        [[nodiscard]] TableViewIterator end() const
         {
-            return QueryResultChunkIterator{static_cast<uint32_t>(chunks.size()), this};
+            return TableViewIterator{static_cast<uint32_t>(tableViews.size()), this};
         }
 
         [[nodiscard]] size_t size() const
         {
-            return chunks.size();
+            return tableViews.size();
         }
 
-        QueryResultChunk & operator[](size_t ix)
+        TableView & operator[](size_t ix)
         {
-            return chunks[ix];
+            return tableViews[ix];
         }
 
         template <typename Func>
@@ -204,12 +208,12 @@ namespace ecs
             }
         }
 
-        void * checkTables(QueryResultChunk & chunk,
+        void * checkTables(TableView & view,
                            component_id_t componentId,
                            uint32_t row,
                            bool mutate);
         void * checkSingletons(component_id_t componentId, bool mutate) const;
-        void * checkRelations(const QueryResultChunk & chunk,
+        void * checkRelations(const TableView & view,
                               uint32_t row,
                               component_id_t componentId,
                               bool mutate) const;
@@ -220,7 +224,7 @@ namespace ecs
 
         template <typename Tuple, std::size_t I>
         void setResultValue(entity_t entity,
-                            const QueryResultChunk & chunk,
+                            const TableView & view,
                             Column * col,
                             Tuple & t,
                             const uint32_t row,
@@ -230,7 +234,7 @@ namespace ecs
         template <std::size_t Fixed, typename Tuple, typename Comps, typename Muts, std::size_t ...
                   I>
         void populateResult(entity_t entity,
-                            const QueryResultChunk & chunk,
+                            const TableView & view,
                             std::array<Column *, sizeof...(I)> columns,
                             Tuple & result,
                             Comps & comps,
@@ -242,15 +246,15 @@ namespace ecs
         void each(Func && f) const;
 
         template <typename ... U, typename Func>
-        void eachChunk(Func && f,
-                       const std::array<component_id_t, sizeof...(U)> & comps,
-                       const std::array<bool, sizeof...(U) + 1> & mp,
-                       const QueryResultChunk & chunk) const;
+        void eachView(Func && f,
+                      const std::array<component_id_t, sizeof...(U)> & comps,
+                      const std::array<bool, sizeof...(U) + 1> & mp,
+                      const TableView & view) const;
     };
 
     template <typename Tuple, std::size_t I>
     void QueryResult::setResultValue(entity_t entity,
-                                     const QueryResultChunk & chunk,
+                                     const TableView & view,
                                      Column * col,
                                      Tuple & t,
                                      const uint32_t row,
@@ -265,7 +269,7 @@ namespace ecs
         }
 
         if (!result_ptr) {
-            result_ptr = checkRelations(chunk, row, componentId, mutate);
+            result_ptr = checkRelations(view, row, componentId, mutate);
         }
         if (!result_ptr && !mutate && inheritance) {
             result_ptr = const_cast<void *>(checkInstancing(entity, componentId, mutate));
@@ -280,7 +284,7 @@ namespace ecs
     template <std::size_t Fixed, typename Tuple, typename Comps, typename Muts, std::size_t...
               I>
     void QueryResult::populateResult(entity_t entity,
-                                     const QueryResultChunk & chunk,
+                                     const TableView & view,
                                      std::array<Column *, sizeof...(I)> columns,
                                      Tuple & result,
                                      Comps & comps,
@@ -288,24 +292,24 @@ namespace ecs
                                      const uint32_t row,
                                      std::index_sequence<I...>) const
     {
-        //chunk.checkIndex(row);
-        (setResultValue<Tuple, I + Fixed>(entity, chunk, columns[I], result, row, comps[I],
+        (setResultValue<Tuple, I + Fixed>(entity, view, columns[I], result, row, comps[I],
                                           muts[I + Fixed]), ...);
     }
 
     template <typename ... U, typename Func>
-    void QueryResult::eachChunk(Func && f,
-                                const std::array<component_id_t, sizeof...(U)> & comps,
-                                const std::array<bool, sizeof...(U) + 1> & mp,
-                                const QueryResultChunk & chunk) const
+    void QueryResult::eachView(Func && f,
+                               const std::array<component_id_t, sizeof...(U)> & comps,
+                               const std::array<bool, sizeof...(U) + 1> & mp,
+                               const TableView & view) const
     {
-        auto columns = chunk.getColumns<U...>(comps);
+        auto columns = view.getColumns<U...>(comps);
 
-        for(size_t row = chunk.startRow; row < chunk.count + chunk.startRow; row++){
+        for (auto row: view) {
+            //for(size_t row = view.startRow; row < view.count + view.startRow; row++){
             std::tuple<EntityHandle, U *...> result;
-            std::get<0>(result) = EntityHandle{chunk.entity(row), world};
+            std::get<0>(result) = EntityHandle{view.entity(row), world};
             populateResult<std::tuple_size<decltype(result)>() - sizeof...(U)>(
-                chunk.entity(row), chunk, columns, result, comps, mp, row,
+                view.entity(row), view, columns, result, comps, mp, row,
                 std::make_index_sequence<sizeof...(U)>()
             );
             std::apply(f, result);
@@ -320,11 +324,28 @@ namespace ecs
         };
         auto mp = get_mutable_parameters(f);
 
-        //std::get<0>(result) = world;
+        if (thread) {
+            std::vector<std::shared_ptr<RxCore::Job<void>>> jobs;
 
-        for (auto & chunk: *this) {
+            for (auto & view: *this) {
+                auto j = RxCore::CreateJob<void>([=]()
+                    {
+                        eachView<U...>(f, comps, mp, view);
+                    }
+                );
+                j->schedule();
+                jobs.push_back(j);
+            }
 
-            eachChunk<U...>(f, comps, mp, chunk);
+            for (auto & jj: jobs) {
+                jj->waitComplete();
+            }
+
+            jobs.clear();
+        } else {
+            for (auto & view: *this) {
+                eachView<U...>(f, comps, mp, view);
+            }
         }
     }
 }
