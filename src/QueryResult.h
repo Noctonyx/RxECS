@@ -8,8 +8,6 @@
 #include "Entity.h"
 #include "Table.h"
 
-#include "Jobs/JobManager.hpp"
-
 template <class T>
 concept mutable_parameter = (std::is_reference_v<T> || std::is_pointer_v<T>)
 && !std::is_const_v<std::remove_reference_t<std::remove_pointer_t<T>>>;
@@ -324,23 +322,26 @@ namespace ecs
         };
         auto mp = get_mutable_parameters(f);
 
-        if (thread && tableViews.size() > 2 && total > 1000) {
-            std::vector<std::shared_ptr<RxCore::Job<void>>> jobs;
+        if (world->canThread && thread && tableViews.size() > 2 && total > 1000) {
+            std::vector<void *> jobs;
 
             for (auto & view: *this) {
-                auto j = RxCore::CreateJob<void>([=]()
-                    {
-                        eachView<U...>(f, comps, mp, view);
-                    }
-                );
-                j->schedule();
+                auto j = world->jobInterface.jobCreator([=]()
+                {
+                    eachView<U...>(f, comps, mp, view);
+                });
+
+                world->jobInterface.jobSchedule(j);
+
                 jobs.push_back(j);
             }
 
             for (auto & jj: jobs) {
-                jj->waitComplete();
+                world->jobInterface.jobWaitComplete(jj);
             }
-
+            for (auto & jj: jobs) {
+                world->jobInterface.jobFree(jj);
+            }
             jobs.clear();
         } else {
             for (auto & view: *this) {
