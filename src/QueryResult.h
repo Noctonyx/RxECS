@@ -322,22 +322,24 @@ namespace ecs
         };
         auto mp = get_mutable_parameters(f);
 
-        if (world->canThread && thread && tableViews.size() > 2 && total > 1000) {
+        auto job = world->jobInterface;
+
+        if (job && thread && tableViews.size() > 2 && total > 1000) {
             std::vector<JobInterface::JobHandle> jobs;
 
             for (auto & view: *this) {
-                auto j = world->jobInterface.jobCreator([=]()
+                auto jh = job->create([=]()
                 {
                     eachView<U...>(f, comps, mp, view);
                 });
 
-                world->jobInterface.jobSchedule(j);
+                job->schedule(jh);
 
-                jobs.push_back(j);
+                jobs.push_back(jh);
             }
 
-            for (auto & jj: jobs) {
-                world->jobInterface.jobWaitComplete(jj);
+            for (auto & jh: jobs) {
+                job->awaitCompletion(jh);
             }
             jobs.clear();
         } else {
