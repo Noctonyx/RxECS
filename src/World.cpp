@@ -382,7 +382,9 @@ namespace ecs
                            componentDestructor<std::remove_reference_t<DynamicComponent>>,
                            componentCopy<std::remove_reference_t<DynamicComponent>>,
                            componentMove<std::remove_reference_t<DynamicComponent>>,
-                           false
+                           false,
+                           componentAllocator<std::remove_reference_t<DynamicComponent>>,
+                           componentDeallocator<std::remove_reference_t<DynamicComponent>>
                        });
 
         return entityId;

@@ -347,14 +347,11 @@ namespace ecs
             }
             jobs.clear();
         } else {
-#endif
-        for (auto & view: *this) {
-            if (view.passesFilters(withFilter)) {
-                eachView<U...>(f, comps, mp, view);
+            for (auto & view: *this) {
+                if (view.passesFilters(withFilter)) {
+                    eachView<U...>(f, comps, mp, view);
+                }
             }
         }
-#ifdef ECS_JOBS
-        }
-#endif
     }
 }
