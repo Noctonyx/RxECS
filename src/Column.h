@@ -23,7 +23,10 @@ namespace ecs
         std::function<void(void*, size_t, uint32_t)> componentDestructor;
         std::function<void(const void*, void*, size_t, uint32_t)> componentCopier;
         std::function<void(void*, void*, size_t, uint32_t)> componentMover;
-        
+
+        std::function<void* (size_t)> componentAllocator;
+        std::function<void(void*, size_t)> componentDeallocator;
+
         std::byte * ptr;
         uint32_t count;
         size_t allocated;
