@@ -115,9 +115,20 @@ namespace ecs
         void * ptr;
     };
 
+    struct JobInterface
+    {
+        using JobHandle = std::shared_ptr<void>;
+
+        virtual JobHandle create(std::function<void()>) = 0;
+        virtual void schedule(JobHandle) = 0;
+        virtual bool isComplete(JobHandle) const = 0;
+        virtual void awaitCompletion(JobHandle) = 0;
+    };
+
     class World
     {
         friend struct Table;
+        friend struct QueryResult;
         friend class ActiveSystem;
 
     public:
@@ -257,6 +268,12 @@ namespace ecs
             systemOrderDirty = true;
         }
 
+
+        void setJobInterface(JobInterface * jobInterface)
+        {
+            this->jobInterface = jobInterface;
+        }
+
     protected:
         uint16_t getEntityArchetype(entity_t id) const;
         void moveEntity(entity_t id, uint16_t from, const ArchetypeTransition & trans);
@@ -306,6 +323,7 @@ namespace ecs
         thread_local inline static Query * activeQuery = nullptr;
 
         std::mutex deferredMutex;
+        JobInterface * jobInterface = nullptr;
 
     public:
         ArchetypeManager am;
