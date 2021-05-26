@@ -323,7 +323,7 @@ namespace ecs
         auto mp = get_mutable_parameters(f);
 
         if (world->canThread && thread && tableViews.size() > 2 && total > 1000) {
-            std::vector<void *> jobs;
+            std::vector<JobInterface::JobHandle> jobs;
 
             for (auto & view: *this) {
                 auto j = world->jobInterface.jobCreator([=]()
@@ -338,9 +338,6 @@ namespace ecs
 
             for (auto & jj: jobs) {
                 world->jobInterface.jobWaitComplete(jj);
-            }
-            for (auto & jj: jobs) {
-                world->jobInterface.jobFree(jj);
             }
             jobs.clear();
         } else {

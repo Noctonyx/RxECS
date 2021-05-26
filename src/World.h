@@ -117,11 +117,12 @@ namespace ecs
 
     struct JobInterface
     {
-        std::function<void* (std::function<void(void)>)> jobCreator;
-        std::function<void(void*)> jobSchedule;
-        std::function<bool(void*)> jobIsComplete;
-        std::function<void(void*)> jobWaitComplete;
-        std::function<void(void*)> jobFree;
+        using JobHandle = std::shared_ptr<void>;
+
+        std::function<JobHandle(std::function<void(void)>)> jobCreator;
+        std::function<void(JobHandle)> jobSchedule;
+        std::function<bool(JobHandle)> jobIsComplete;
+        std::function<void(JobHandle)> jobWaitComplete;
     };
 
     class World
