@@ -57,7 +57,7 @@ namespace ecs
         }
 
         TableViewRowIterator & operator++();
-        size_t operator*() const;
+        uint32_t operator*() const;
     };
 
     struct TableView
@@ -329,8 +329,9 @@ namespace ecs
             world->getComponentId<std::remove_const_t<U>>()...
         };
         auto mp = get_mutable_parameters(f);
+        
 #ifdef ECS_JOBS
-        if (thread) {
+        if (thread && tableViews.size() > 2 && total > 1000) {
             std::vector<std::shared_ptr<RxCore::Job<void>>> jobs;
 
             for (auto & view: *this) {
