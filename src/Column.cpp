@@ -6,17 +6,20 @@ namespace ecs
         : componentId(componentId)
         , world(world)
     {
-        auto cd = world->getComponentDetails(componentId);
+        const auto cd = world->getComponentDetails(componentId);
+
         componentSize = cd->size;
         alignment = cd->alignment;
         componentConstructor = cd->componentConstructor;
         componentDestructor = cd->componentDestructor;
         componentCopier = cd->componentCopier;
         componentMover = cd->componentMover;
+        componentAllocator = cd->allocator;
+        componentDeallocator = cd->deallocator;
 
         auto const initial_size = 10;
 
-        ptr = new std::byte[initial_size * cd->size];
+        ptr = static_cast<std::byte *>(cd->allocator(initial_size));
         count = 0;
         allocated = initial_size;
     }
@@ -24,20 +27,21 @@ namespace ecs
     Column::~Column()
     {
         componentDestructor(ptr, componentSize, count);
-        delete ptr;
+        componentDeallocator(ptr, allocated);
         ptr = nullptr;
     }
 
     void Column::enlargeMemory()
     {
         const size_t new_size = allocated * 3 / 2 + 1;
-        const auto new_ptr = new std::byte[new_size * componentSize];
+        const auto new_ptr = componentAllocator(new_size);
 
         componentMover(ptr, new_ptr, componentSize, count);
         componentDestructor(ptr, componentSize, count);
+        componentDeallocator(ptr, allocated);
+
         allocated = new_size;
-        delete ptr;
-        ptr = new_ptr;
+        ptr = static_cast<std::byte *>(new_ptr);
     }
 
     size_t Column::addMoveEntry(void * srcPtr)
@@ -53,7 +57,7 @@ namespace ecs
         return count++;
     }
 
-    size_t Column::addCopyEntry(void* srcPtr)
+    size_t Column::addCopyEntry(void * srcPtr)
     {
         assert(count <= allocated);
 
@@ -61,7 +65,7 @@ namespace ecs
             enlargeMemory();
         }
 
-        void* dest_ptr = ptr + count * componentSize;
+        void * dest_ptr = ptr + count * componentSize;
         componentCopier(srcPtr, dest_ptr, componentSize, 1);
         return count++;
     }

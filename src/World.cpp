@@ -34,7 +34,9 @@ namespace ecs
             componentDestructor<Component>,
             componentCopy<Component>,
             componentMove<Component>,
-            false
+            false,
+            componentAllocator<Component>,
+            componentDeallocator<Component>
         };
 
         set(componentBootstrapId, componentBootstrapId, &componentBootstrap);
