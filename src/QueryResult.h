@@ -55,7 +55,7 @@ namespace ecs
         }
 
         TableViewRowIterator & operator++();
-        size_t operator*() const;
+        uint32_t operator*() const;
     };
 
     struct TableView

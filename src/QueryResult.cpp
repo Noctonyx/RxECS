@@ -9,9 +9,9 @@ namespace ecs
         return *this;
     }
 
-    size_t TableViewRowIterator::operator*() const
+    uint32_t TableViewRowIterator::operator*() const
     {
-        return row;
+        return static_cast<uint32_t>(row);
     }
 
     void TableView::checkIndex(uint32_t rowIndex) const
