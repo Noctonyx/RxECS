@@ -115,6 +115,15 @@ namespace ecs
         void * ptr;
     };
 
+    struct JobInterface
+    {
+        std::function<void* (std::function<void(void)>)> jobCreator;
+        std::function<void(void*)> jobSchedule;
+        std::function<bool(void*)> jobIsComplete;
+        std::function<void(void*)> jobWaitComplete;
+        std::function<void(void*)> jobFree;
+    };
+
     class World
     {
         friend struct Table;
@@ -304,6 +313,10 @@ namespace ecs
         thread_local inline static Query * activeQuery = nullptr;
 
         std::mutex deferredMutex;
+
+    public:
+        JobInterface jobInterface;
+        bool canThread;
 
     public:
         ArchetypeManager am;

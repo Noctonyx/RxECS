@@ -437,7 +437,7 @@ namespace ecs
                 n = "System";
             }
 #endif
-            OPTICK_EVENT("ExecuteSystem")
+            //OPTICK_EVENT("ExecuteSystem")
 
             if (auto system = getUpdate<System>(sys); system) {
                 const auto start = std::chrono::high_resolution_clock::now();                
