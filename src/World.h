@@ -300,7 +300,7 @@ namespace ecs
 
         bool systemOrderDirty = true;
 
-        thread_local inline static System* activeSystem = nullptr;
+        thread_local inline static System * activeSystem = nullptr;
         thread_local inline static Query * activeQuery = nullptr;
 
         std::mutex deferredMutex;
@@ -467,7 +467,9 @@ namespace ecs
                            componentDestructor<std::remove_reference_t<T>>,
                            componentCopy<std::remove_reference_t<T>>,
                            componentMove<std::remove_reference_t<T>>,
-                           is_relation
+                           is_relation,
+                           componentAllocator<std::remove_reference_t<T>>,
+                           componentDeallocator<std::remove_reference_t<T>>
                        });
 
         componentMap.emplace(v, id);
@@ -485,9 +487,9 @@ namespace ecs
 
     class ActiveSystem
     {
-        World* world;
+        World * world;
     public:
-        ActiveSystem(World* w, System* s)
+        ActiveSystem(World * w, System * s)
             : world(w)
         {
             w->activeSystem = s;

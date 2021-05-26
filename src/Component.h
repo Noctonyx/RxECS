@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <string>
+#include <memory>
 #include <string_view>
 #include <functional>
 #include <span>
@@ -22,7 +23,28 @@ namespace ecs
         std::function<void(void *, void *, size_t, uint32_t)> componentMover;
 
         bool isRelation;
+
+        std::function<void* (size_t)> allocator;
+        std::function<void(void *,size_t)> deallocator;
+        //std::allocator<Component> alloc;
     };
+
+    template<class T>
+    void * componentAllocator(size_t n)
+    {
+        std::allocator<T> a;
+        return a.allocate(n);
+        //return std::allocator_traits<std::allocator<T>>::allocate(n);
+    }
+
+    template<class T>
+    void componentDeallocator(void * p, size_t n)
+    {
+        std::allocator<T> a;
+
+        return a.deallocate(static_cast<T *>(p), n);
+        //return std::allocator_traits<std::allocator<T>>::deallocate(p, n);
+    }
 
     template <typename T>
     void componentConstructor(
@@ -37,7 +59,8 @@ namespace ecs
 
         std::span<T> components(static_cast<T *>(ptr), count);
         for (auto & component: components) {
-            new(&component) T();
+            std::construct_at<T>(&component);
+            //new(&component) T();
         }
     }
 
@@ -52,7 +75,8 @@ namespace ecs
         assert(size == sizeof(T));
         std::span<T> components(static_cast<T *>(ptr), count);
         for (auto & component: components) {
-            component.~T();
+            std::destroy_at<T>(&component);
+            //component.~T();
         }
     }
 
