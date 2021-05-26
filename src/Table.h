@@ -36,6 +36,7 @@ namespace ecs
         void addEntity(entity_t id);
         void removeEntity(entity_t id);
 
+        bool hasComponent(component_id_t componentId) const;
         const void * getComponent(entity_t id, component_id_t componentId);
         void * getUpdateComponent(entity_t id, component_id_t componentId);
         void setComponent(entity_t id, component_id_t componentId, const void * ptr);

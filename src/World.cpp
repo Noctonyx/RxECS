@@ -25,7 +25,7 @@ namespace ecs
         tables[0]->addEntity(0);
 
         componentBootstrapId = newEntity().id;
-        auto v = type_id<Component>();// std::type_index(typeid(Component));
+        auto v = type_id<Component>(); // std::type_index(typeid(Component));
         componentMap.emplace(v, componentBootstrapId);
         componentBootstrap = {
             trimName(typeid(Component).name()),
@@ -42,7 +42,7 @@ namespace ecs
         set<Name>(getComponentId<Name>(), {.name="Name"});
 
         // Query to find queries
-        queryQuery = createQuery<Query>().id; 
+        queryQuery = createQuery<Query>().id;
 
         // query to find systems
         systemQuery = createQuery<System>().withRelation<SetForSystem, SystemSet>().id;
@@ -159,6 +159,7 @@ namespace ecs
         assert(i >= 0);
         assert(i < entities.size());
         assert(entities[i].version == v);
+        assert(!has<Component>(id));
 
         const auto at = getEntityArchetype(id);
         tables[at]->removeEntity(id);
@@ -369,6 +370,22 @@ namespace ecs
         return get<Component>(id);
     }
 
+    component_id_t World::createDynamicComponent(entity_t entityId)
+    {
+        set<Component>(entityId, {
+                           description(entityId),
+                           sizeof(std::remove_reference_t<DynamicComponent>),
+                           alignof(std::remove_reference_t<DynamicComponent>),
+                           componentConstructor<std::remove_reference_t<DynamicComponent>>,
+                           componentDestructor<std::remove_reference_t<DynamicComponent>>,
+                           componentCopy<std::remove_reference_t<DynamicComponent>>,
+                           componentMove<std::remove_reference_t<DynamicComponent>>,
+                           false
+                       });
+
+        return entityId;
+    }
+
     QueryBuilder World::createQuery(const std::set<component_id_t> & with)
     {
         auto q = newEntity();
@@ -420,7 +437,7 @@ namespace ecs
         auto aq = get<Query>(q);
 
         return QueryResult(this, aq->tables, aq->with, aq->relations, aq->singleton,
-                           aq->inheritance, aq->thread);
+                           aq->inheritance, aq->thread, aq->filterComponents);
     }
 
     void World::executeSystem(systemid_t sys)
@@ -435,10 +452,8 @@ namespace ecs
                 n = "System";
             }
 #endif
-            OPTICK_EVENT("ExecuteSystem")
-
             if (auto system = getUpdate<System>(sys); system) {
-                const auto start = std::chrono::high_resolution_clock::now();                
+                const auto start = std::chrono::high_resolution_clock::now();
                 ActiveSystem as(this, system);
 
                 if (system->query) {
@@ -460,7 +475,8 @@ namespace ecs
                     system->executeProcessor(this);
                 }
                 const auto end = std::chrono::high_resolution_clock::now();
-                system->executionTime = system->executionTime * 0.9f + 0.1f* std::chrono::duration<float>(end - start).count();
+                system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
+                    float>(end - start).count();
             }
         }
     }

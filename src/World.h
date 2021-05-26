@@ -210,6 +210,8 @@ namespace ecs
         template <typename T>
         component_id_t getComponentId();
 
+        component_id_t createDynamicComponent(entity_t entityId);
+
         QueryBuilder createQuery(const std::set<component_id_t> & with);
 
         template <class ... TArgs>

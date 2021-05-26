@@ -39,7 +39,7 @@ add_library(RxECS STATIC
     )
 
 target_link_libraries(RxECS_tests PRIVATE RxECS)
-target_link_libraries(RxECS PUBLIC RxCore)
+#target_link_libraries(RxECS PUBLIC RxCore)
 
 target_include_directories(RxECS PUBLIC "src")
 target_include_directories(RxECS INTERFACE "include")

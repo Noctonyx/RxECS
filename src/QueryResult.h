@@ -8,7 +8,9 @@
 #include "Entity.h"
 #include "Table.h"
 
+#ifdef ECS_JOBS
 #include "Jobs/JobManager.hpp"
+#endif
 
 template <class T>
 concept mutable_parameter = (std::is_reference_v<T> || std::is_pointer_v<T>)
@@ -74,6 +76,8 @@ namespace ecs
         [[nodiscard]] entity_t entity(uint32_t rowIndex) const;
         [[nodiscard]] const void * get(component_id_t comp, uint32_t row) const;
         void checkValidity() const;
+
+        bool passesFilters(const std::unordered_set<component_id_t> & filters) const;
 
         [[nodiscard]] void * getUpdate(component_id_t comp, uint32_t row) const;
 
@@ -161,6 +165,7 @@ namespace ecs
         std::set<component_id_t> singletons;
         bool inheritance;
         bool thread;
+        std::unordered_set<component_id_t> withFilter;
 
     public:
         uint32_t total;
@@ -172,7 +177,8 @@ namespace ecs
                     const std::set<std::pair<component_id_t, std::set<component_id_t>>> & relations,
                     const std::set<component_id_t> & singletons,
                     bool inheritance,
-                    bool thread
+                    bool thread,
+                    const std::set<component_id_t> & filter
         );
 
         [[nodiscard]] uint32_t count() const
@@ -323,7 +329,7 @@ namespace ecs
             world->getComponentId<std::remove_const_t<U>>()...
         };
         auto mp = get_mutable_parameters(f);
-
+#ifdef ECS_JOBS
         if (thread) {
             std::vector<std::shared_ptr<RxCore::Job<void>>> jobs;
 
@@ -343,9 +349,14 @@ namespace ecs
 
             jobs.clear();
         } else {
-            for (auto & view: *this) {
+#endif
+        for (auto & view: *this) {
+            if (view.passesFilters(withFilter)) {
                 eachView<U...>(f, comps, mp, view);
             }
         }
+#ifdef ECS_JOBS
+        }
+#endif
     }
 }

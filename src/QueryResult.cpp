@@ -39,6 +39,16 @@ namespace ecs
         }
     }
 
+    bool TableView::passesFilters(const std::unordered_set<component_id_t> & filters) const
+    {
+        for (auto f: filters) {
+            if (!table->hasComponent(f)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     void * TableView::getUpdate(component_id_t comp, const uint32_t row) const
     {
         auto c = table->columns.find(comp);
@@ -61,7 +71,8 @@ namespace ecs
         const std::set<std::pair<component_id_t, std::set<component_id_t>>> & withRelations,
         const std::set<component_id_t> & withSingletons,
         bool inherit,
-        bool thread
+        bool thread,
+        const std::set<component_id_t> & filter
     )
         : world(world)
         , inheritance(inherit)
@@ -72,13 +83,13 @@ namespace ecs
             size_t st = 0;
             size_t cs = std::max(t->entities.size() / 40, 1024ULL);
             while (st < t->entities.size()) {
-                auto& ch = tableViews.emplace_back();
+                auto & ch = tableViews.emplace_back();
                 ch.world = world;
                 ch.table = t;
                 ch.tableUpdateTimestamp = t->lastUpdateTimestamp;
                 ch.startRow = st;
                 ch.count = std::min(t->entities.size() - st, cs);
-                for (auto w : with) {
+                for (auto w: with) {
                     components.insert(w);
                 }
                 st += ch.count;
@@ -89,8 +100,12 @@ namespace ecs
             components.insert(w);
         }
 
-        for (auto& [c, v] : withRelations) {
-            for (auto vx : v) {
+        for (auto w: filter) {
+            withFilter.insert(w);
+        }
+
+        for (auto & [c, v]: withRelations) {
+            for (auto vx: v) {
                 relationLookup[vx] = c;
             }
         }
@@ -135,14 +150,14 @@ namespace ecs
                                        bool mutate) const
     {
         auto it = relationLookup.find(componentId);
-        if(it == relationLookup.end()) {
+        if (it == relationLookup.end()) {
             return nullptr;
         }
         auto relation = it->second;
 
         const auto relation_ptr = view.get(relation, row);
         if (relation_ptr) {
-            auto rp = static_cast<const Relation*>(relation_ptr);
+            auto rp = static_cast<const Relation *>(relation_ptr);
             if (!world->isAlive(rp->entity)) {
                 return nullptr;
             }
@@ -151,11 +166,10 @@ namespace ecs
                 if (related_component_ptr) {
                     return related_component_ptr;
                 }
-            }
-            else {
+            } else {
                 auto related_component_ptr = world->get(rp->entity, componentId);
                 if (related_component_ptr) {
-                    return const_cast<void*>(related_component_ptr);
+                    return const_cast<void *>(related_component_ptr);
                 }
             }
         }
