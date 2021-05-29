@@ -3,7 +3,6 @@
 #include <vector>
 #include <set>
 #include <typeinfo>
-#include <typeindex>
 #include <unordered_set>
 
 #include "robin_hood.h"
@@ -269,9 +268,9 @@ namespace ecs
         }
 
 
-        void setJobInterface(JobInterface * jobInterface)
+        void setJobInterface(JobInterface * jobi)
         {
-            this->jobInterface = jobInterface;
+            this->jobInterface = jobi;
         }
 
     protected:

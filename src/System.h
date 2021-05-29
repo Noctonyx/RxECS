@@ -57,6 +57,10 @@ namespace ecs
         float delta = 0.f;
         float rate = 0.f;
 
+        float lastTime = 0.f;
+        float deferredTime = 0.f;
+        size_t deferredCount = 0LL;
+
         std::unordered_map<component_id_t, uint32_t> writeCounts{};
         std::unordered_map<entity_t, uint32_t> labelCounts{};
         std::unordered_map<entity_t, uint32_t> labelPreCounts{};

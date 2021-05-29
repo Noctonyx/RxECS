@@ -565,6 +565,8 @@ namespace ecs
             }
             systemsToRun.pop_front();
         }
+        //const auto end = std::chrono::high_resolution_clock::now();
+        
     }
 
     void World::executeSystemGroup(entity_t systemGroup)
@@ -598,8 +600,21 @@ namespace ecs
         recalculateSystemOrder();
 
         for (auto pg: pipelineGroupSequence) {
+            float runTime;
+            auto gd = getUpdate<SystemGroup>(pg);
+            const auto start = std::chrono::high_resolution_clock::now();
             executeSystemGroup(pg);
+            const auto systems = std::chrono::high_resolution_clock::now();
+
             executeDeferred();
+            const auto end = std::chrono::high_resolution_clock::now();
+
+            runTime = std::chrono::duration<float>(end - systems).count();
+            gd->deferredTime = gd->deferredTime * 0.9f + 0.1f * runTime;
+            gd->deferredCount = deferredCommands.size();
+
+            runTime = std::chrono::duration<float>(end - start).count();
+            gd->lastTime = gd->lastTime * 0.9f + 0.1f * runTime;
         }
 
         getResults(streamQuery).each<StreamComponent>([](EntityHandle, StreamComponent * s)
