@@ -102,6 +102,15 @@ namespace ecs
         return EntityHandle{id, this};
     }
 
+    EntityHandle World::newEntityReplace(const char * name)
+    {
+        auto e = lookup(name);
+        if(isAlive(e)) {
+            e.destroy();
+        }
+        return newEntity(name);
+    }
+
     EntityHandle World::instantiate(entity_t prefab)
     {
         const auto prefabAt = getEntityArchetype(prefab);
@@ -402,6 +411,14 @@ namespace ecs
 
     SystemBuilder World::createSystem(const char * name)
     {
+        if(lookup(name).isAlive()) {
+            auto e = lookup(name);
+            if(e.has<System>()) {
+                deleteSystem(e);
+            } else {
+                destroy(e);
+            }
+        }
         auto s = newEntity();
         s.set<System>(System{.query = 0, .world = this});
         if (name) {

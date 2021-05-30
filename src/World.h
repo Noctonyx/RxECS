@@ -135,6 +135,7 @@ namespace ecs
         ~World();
 
         EntityHandle newEntity(const char * name = nullptr);
+        EntityHandle newEntityReplace(const char * name);
         //entity_t newEntity();
         EntityHandle instantiate(entity_t prefab);
 
