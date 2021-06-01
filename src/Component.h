@@ -131,4 +131,9 @@ namespace ecs
     struct InstanceOf : Relation
     {
     };
+
+    struct DynamicComponent
+    {
+        
+    };
 }

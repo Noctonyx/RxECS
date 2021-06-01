@@ -24,9 +24,9 @@ namespace ecs
     template <class ... TArgs>
     QueryBuilder & QueryBuilder::with()
     {
-        std::vector<component_id_t> with = { world->getComponentId<TArgs>()... };
+        std::vector<component_id_t> with = {world->getComponentId<TArgs>()...};
         auto qp = world->getUpdate<Query>(id);
-        for (auto w : with) {
+        for (auto w: with) {
             qp->with.insert(w);
         }
         qp->recalculateQuery(world);
@@ -73,8 +73,17 @@ namespace ecs
         return *this;
     }
 
+    inline QueryBuilder & QueryBuilder::withDynamic(component_id_t componentId)
+    {
+        auto qp = world->getUpdate<Query>(id);
+        qp->with.insert(componentId);
+        qp->recalculateQuery(world);
+
+        return *this;
+    }
+
     inline QueryBuilder & QueryBuilder::withPrefabs()
-    {       
+    {
         auto qp = world->getUpdate<Query>(id);
         qp->without.erase(world->getComponentId<Prefab>());
         qp->recalculateQuery(world);

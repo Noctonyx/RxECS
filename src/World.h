@@ -3,7 +3,6 @@
 #include <vector>
 #include <set>
 #include <typeinfo>
-#include <typeindex>
 #include <unordered_set>
 
 #include "robin_hood.h"
@@ -136,6 +135,7 @@ namespace ecs
         ~World();
 
         EntityHandle newEntity(const char * name = nullptr);
+        EntityHandle newEntityReplace(const char * name);
         //entity_t newEntity();
         EntityHandle instantiate(entity_t prefab);
 
@@ -221,6 +221,8 @@ namespace ecs
         template <typename T>
         component_id_t getComponentId();
 
+        component_id_t createDynamicComponent(entity_t entityId);
+
         QueryBuilder createQuery(const std::set<component_id_t> & with);
 
         template <class ... TArgs>
@@ -267,9 +269,9 @@ namespace ecs
         }
 
 
-        void setJobInterface(JobInterface * jobInterface)
+        void setJobInterface(JobInterface * jobi)
         {
-            this->jobInterface = jobInterface;
+            this->jobInterface = jobi;
         }
 
     protected:

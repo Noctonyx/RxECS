@@ -25,7 +25,7 @@ namespace ecs
         tables[0]->addEntity(0);
 
         componentBootstrapId = newEntity().id;
-        auto v = type_id<Component>();// std::type_index(typeid(Component));
+        auto v = type_id<Component>(); // std::type_index(typeid(Component));
         componentMap.emplace(v, componentBootstrapId);
         componentBootstrap = {
             trimName(typeid(Component).name()),
@@ -44,7 +44,7 @@ namespace ecs
         set<Name>(getComponentId<Name>(), {.name="Name"});
 
         // Query to find queries
-        queryQuery = createQuery<Query>().id; 
+        queryQuery = createQuery<Query>().id;
 
         // query to find systems
         systemQuery = createQuery<System>().withRelation<SetForSystem, SystemSet>().id;
@@ -100,6 +100,15 @@ namespace ecs
             set<Name>(id, {name});
         }
         return EntityHandle{id, this};
+    }
+
+    EntityHandle World::newEntityReplace(const char * name)
+    {
+        auto e = lookup(name);
+        if(isAlive(e)) {
+            e.destroy();
+        }
+        return newEntity(name);
     }
 
     EntityHandle World::instantiate(entity_t prefab)
@@ -161,6 +170,7 @@ namespace ecs
         assert(i >= 0);
         assert(i < entities.size());
         assert(entities[i].version == v);
+        assert(!has<Component>(id));
 
         const auto at = getEntityArchetype(id);
         tables[at]->removeEntity(id);
@@ -371,6 +381,24 @@ namespace ecs
         return get<Component>(id);
     }
 
+    component_id_t World::createDynamicComponent(entity_t entityId)
+    {
+        set<Component>(entityId, {
+                           description(entityId),
+                           sizeof(std::remove_reference_t<DynamicComponent>),
+                           alignof(std::remove_reference_t<DynamicComponent>),
+                           componentConstructor<std::remove_reference_t<DynamicComponent>>,
+                           componentDestructor<std::remove_reference_t<DynamicComponent>>,
+                           componentCopy<std::remove_reference_t<DynamicComponent>>,
+                           componentMove<std::remove_reference_t<DynamicComponent>>,
+                           false,
+                           componentAllocator<std::remove_reference_t<DynamicComponent>>,
+                           componentDeallocator<std::remove_reference_t<DynamicComponent>>
+                       });
+
+        return entityId;
+    }
+
     QueryBuilder World::createQuery(const std::set<component_id_t> & with)
     {
         auto q = newEntity();
@@ -383,6 +411,14 @@ namespace ecs
 
     SystemBuilder World::createSystem(const char * name)
     {
+        if(lookup(name).isAlive()) {
+            auto e = lookup(name);
+            if(e.has<System>()) {
+                deleteSystem(e);
+            } else {
+                destroy(e);
+            }
+        }
         auto s = newEntity();
         s.set<System>(System{.query = 0, .world = this});
         if (name) {
@@ -422,7 +458,7 @@ namespace ecs
         auto aq = get<Query>(q);
 
         return QueryResult(this, aq->tables, aq->with, aq->relations, aq->singleton,
-                           aq->inheritance, aq->thread);
+                           aq->inheritance, aq->thread, aq->filterComponents);
     }
 
     void World::executeSystem(systemid_t sys)
@@ -440,7 +476,7 @@ namespace ecs
             //OPTICK_EVENT("ExecuteSystem")
 
             if (auto system = getUpdate<System>(sys); system) {
-                const auto start = std::chrono::high_resolution_clock::now();                
+                const auto start = std::chrono::high_resolution_clock::now();
                 ActiveSystem as(this, system);
 
                 if (system->query) {
@@ -462,7 +498,8 @@ namespace ecs
                     system->executeProcessor(this);
                 }
                 const auto end = std::chrono::high_resolution_clock::now();
-                system->executionTime = system->executionTime * 0.9f + 0.1f* std::chrono::duration<float>(end - start).count();
+                system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
+                    float>(end - start).count();
             }
         }
     }
@@ -545,6 +582,8 @@ namespace ecs
             }
             systemsToRun.pop_front();
         }
+        //const auto end = std::chrono::high_resolution_clock::now();
+        
     }
 
     void World::executeSystemGroup(entity_t systemGroup)
@@ -578,8 +617,21 @@ namespace ecs
         recalculateSystemOrder();
 
         for (auto pg: pipelineGroupSequence) {
+            float runTime;
+            auto gd = getUpdate<SystemGroup>(pg);
+            const auto start = std::chrono::high_resolution_clock::now();
             executeSystemGroup(pg);
+            const auto systems = std::chrono::high_resolution_clock::now();
+
             executeDeferred();
+            const auto end = std::chrono::high_resolution_clock::now();
+
+            runTime = std::chrono::duration<float>(end - systems).count();
+            gd->deferredTime = gd->deferredTime * 0.9f + 0.1f * runTime;
+            gd->deferredCount = deferredCommands.size();
+
+            runTime = std::chrono::duration<float>(end - start).count();
+            gd->lastTime = gd->lastTime * 0.9f + 0.1f * runTime;
         }
 
         getResults(streamQuery).each<StreamComponent>([](EntityHandle, StreamComponent * s)

@@ -18,6 +18,7 @@ namespace ecs
 
         template <typename T>
         EntityHandle & add();
+        EntityHandle & addDynamic(component_id_t id);
 
         template <typename T>
         T * addAndUpdate();
@@ -35,6 +36,7 @@ namespace ecs
 
         template <typename T>
         bool has();
+        bool hasDynamic(component_id_t id);
 
         template <typename T>
         T * getUpdate();
@@ -50,6 +52,7 @@ namespace ecs
 
         template <typename T>
         EntityHandle & remove();
+        EntityHandle & removeDynamic(component_id_t id);
 
         bool isAlive() const;
         EntityHandle & destroy();

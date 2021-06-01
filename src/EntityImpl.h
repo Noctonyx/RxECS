@@ -41,12 +41,12 @@ namespace ecs
     }
 
     template <typename T>
-    EntityHandle& EntityHandle::setDeferred(const T& value)
+    EntityHandle & EntityHandle::setDeferred(const T & value)
     {
         world->setDeferred<T>(id, value);
         return *this;
     }
-    
+
     template <typename T>
     bool EntityHandle::has()
     {
@@ -84,9 +84,26 @@ namespace ecs
         return *this;
     }
 
+    inline EntityHandle & EntityHandle::addDynamic(component_id_t componentId)
+    {
+        world->add(id, componentId);
+        return *this;
+    }
+
     inline EntityHandle & EntityHandle::destroyDeferred()
     {
         world->destroyDeferred(id);
+        return *this;
+    }
+
+    inline bool EntityHandle::hasDynamic(component_id_t componentId)
+    {
+        return world->has(id, componentId);
+    }
+
+    inline EntityHandle & EntityHandle::removeDynamic(component_id_t componentId)
+    {
+        world->remove(id, componentId);
         return *this;
     }
 

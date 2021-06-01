@@ -407,4 +407,31 @@ TEST_SUITE("World")
             CHECK(!j.isAlive());
         }
     }
+
+    TEST_CASE("DynamicComponent")
+    {
+        ecs::World w;
+
+        const auto dce = w.newEntity("TestName");
+        const auto dc = w.createDynamicComponent(dce);
+
+        SUBCASE("World Interface") {
+            const auto e = w.newEntity();
+            w.add(e, dc);
+
+            assert(w.has(e, dc));
+
+            w.remove(e, dc);
+            assert(!w.has(e, dc));
+        }
+
+        SUBCASE("EntityHandle Interface")
+        {
+            auto e = w.newEntity();
+            e.addDynamic(dc);
+            assert(e.hasDynamic(dc));
+            e.removeDynamic(dc);
+            assert(!e.hasDynamic(dc));
+        }
+    }
 }

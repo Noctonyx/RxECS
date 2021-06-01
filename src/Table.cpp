@@ -17,12 +17,12 @@ namespace ecs
 
     TableIterator Table::begin()
     {
-        return TableIterator{ entities.begin(), world };
+        return TableIterator{entities.begin(), world};
     }
 
     TableIterator Table::end()
     {
-        return TableIterator{ entities.end(), world };
+        return TableIterator{entities.end(), world};
     }
 
     void Table::addEntity(const entity_t id)
@@ -52,11 +52,18 @@ namespace ecs
         stampUpdateTime();
     }
 
+    bool Table::hasComponent(component_id_t componentId) const
+    {
+        auto it = columns.find(componentId);
+
+        return (it != columns.end());
+    }
+
     const void * Table::getComponent(entity_t id, component_id_t componentId)
     {
         auto it = columns.find(componentId);
 
-        if(it == columns.end()) {
+        if (it == columns.end()) {
             return nullptr;
         }
         const uint32_t row = getEntityRow(id);
@@ -87,13 +94,13 @@ namespace ecs
     std::string Table::description() const
     {
         std::string r = "";
-        for(auto & [x, y]: columns) {
-            if(r != "") {
+        for (auto & [x, y]: columns) {
+            if (r != "") {
                 r += "|";
             }
             r += world->description(x);
         }
-        if(r == "") {
+        if (r == "") {
             r = "Empty";
         }
         return r;
@@ -143,11 +150,11 @@ namespace ecs
     }
 
     void Table::copyEntity(World * world,
-        const Table * fromTable,
-        Table * toTable,     
-        entity_t id,
-        entity_t newEntity,
-        const ArchetypeTransition & trans)
+                           const Table * fromTable,
+                           Table * toTable,
+                           entity_t id,
+                           entity_t newEntity,
+                           const ArchetypeTransition & trans)
     {
         const auto source_row = fromTable->getEntityRow(id);
 
@@ -156,11 +163,11 @@ namespace ecs
         world->entities[index(newEntity)].row = new_index;
         toTable->entities.push_back(newEntity);
 
-        for (auto& a : trans.addComponents) {
+        for (auto & a: trans.addComponents) {
             toTable->columns[a]->addEntry();
         }
 
-        for (auto& e : trans.preserveComponents) {
+        for (auto & e: trans.preserveComponents) {
             const auto ptr1 = fromTable->columns.at(e)->getEntry(source_row);
             toTable->columns[e]->addCopyEntry(ptr1);
         }

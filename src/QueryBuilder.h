@@ -16,6 +16,8 @@ namespace ecs
         template <class ... TArgs>
         QueryBuilder& with();
 
+        QueryBuilder& withDynamic(component_id_t id);
+
         template <class T, class ... U>
         QueryBuilder & withRelation();
 

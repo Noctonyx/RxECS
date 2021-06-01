@@ -73,6 +73,8 @@ namespace ecs
         [[nodiscard]] const void * get(component_id_t comp, uint32_t row) const;
         void checkValidity() const;
 
+        bool passesFilters(const std::unordered_set<component_id_t> & filters) const;
+
         [[nodiscard]] void * getUpdate(component_id_t comp, uint32_t row) const;
 
         template <typename T>
@@ -159,6 +161,7 @@ namespace ecs
         std::set<component_id_t> singletons;
         bool inheritance;
         bool thread;
+        std::unordered_set<component_id_t> withFilter;
 
     public:
         uint32_t total;
@@ -170,7 +173,8 @@ namespace ecs
                     const std::set<std::pair<component_id_t, std::set<component_id_t>>> & relations,
                     const std::set<component_id_t> & singletons,
                     bool inheritance,
-                    bool thread
+                    bool thread,
+                    const std::set<component_id_t> & filter
         );
 
         [[nodiscard]] uint32_t count() const
@@ -344,7 +348,9 @@ namespace ecs
             jobs.clear();
         } else {
             for (auto & view: *this) {
-                eachView<U...>(f, comps, mp, view);
+                if (view.passesFilters(withFilter)) {
+                    eachView<U...>(f, comps, mp, view);
+                }
             }
         }
     }
