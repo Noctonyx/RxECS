@@ -307,4 +307,33 @@ TEST_SUITE("Systems")
         world.step(0.01f);
         CHECK(c == 1);
     }
+
+    TEST_CASE("System Modules")
+    {
+        ecs::World world;
+
+        world.newEntity("Group:1").set<ecs::SystemGroup>({1, false, 0.f, 0.f});
+
+        auto mod = world.newEntity().add<ecs::Module>();
+
+        uint32_t c = 0;
+        {
+            world.pushModuleScope(mod);
+            world.createSystem("Test1")
+                .inGroup("Group:1")
+                .execute([&](ecs::World*)
+                    {
+                        c++;
+                    });
+            world.popModuleScope();
+        }
+
+        world.setModuleEnabled(mod, false);
+        world.step(0.0f);
+        CHECK(c == 0);
+
+        world.setModuleEnabled(mod, true);
+        world.step(0.0f);
+        CHECK(c == 1);
+    }
 }

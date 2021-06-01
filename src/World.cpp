@@ -47,7 +47,9 @@ namespace ecs
         queryQuery = createQuery<Query>().id;
 
         // query to find systems
-        systemQuery = createQuery<System>().withRelation<SetForSystem, SystemSet>().id;
+        systemQuery = createQuery<System>()
+                      .withRelation<SetForSystem, SystemSet>()
+                      .withRelation<HasModule, Module>().id;
         systemGroupQuery = createQuery<SystemGroup>().id;
         streamQuery = createQuery<StreamComponent>().id;
     }
@@ -105,7 +107,7 @@ namespace ecs
     EntityHandle World::newEntityReplace(const char * name)
     {
         auto e = lookup(name);
-        if(isAlive(e)) {
+        if (isAlive(e)) {
             e.destroy();
         }
         return newEntity(name);
@@ -411,9 +413,9 @@ namespace ecs
 
     SystemBuilder World::createSystem(const char * name)
     {
-        if(lookup(name).isAlive()) {
+        if (lookup(name).isAlive()) {
             auto e = lookup(name);
-            if(e.has<System>()) {
+            if (e.has<System>()) {
                 deleteSystem(e);
             } else {
                 destroy(e);
@@ -424,6 +426,11 @@ namespace ecs
         if (name) {
             s.set<Name>({.name = name});
             nameIndex[name] = s.id;
+        }
+
+        if (!moduleScope.empty()) {
+            auto module = moduleScope.top();
+            s.set<HasModule>({{module}});
         }
 
         markSystemsDirty();
@@ -583,7 +590,6 @@ namespace ecs
             systemsToRun.pop_front();
         }
         //const auto end = std::chrono::high_resolution_clock::now();
-        
     }
 
     void World::executeSystemGroup(entity_t systemGroup)
@@ -681,6 +687,23 @@ namespace ecs
     Archetype & World::getEntityArchetypeDetails(entity_t id)
     {
         return am.getArchetypeDetails(getEntityArchetype(id));
+    }
+
+    void World::pushModuleScope(entity_t module)
+    {
+        moduleScope.push(module);
+    }
+
+    void World::popModuleScope()
+    {
+        assert(!moduleScope.empty());
+        moduleScope.pop();
+    }
+
+    void World::setModuleEnabled(const entity_t module, const bool enabled)
+    {
+        getUpdate<Module>(module)->enabled = enabled;
+        markSystemsDirty();
     }
 
     uint16_t World::getEntityArchetype(entity_t id) const
@@ -796,12 +819,16 @@ namespace ecs
 
         std::unordered_map<entity_t, std::vector<entity_t>> systems;
 
-        getResults(systemQuery).each<System, SystemSet>(
-            [&](EntityHandle e, System * s, const SystemSet * set)
+        getResults(systemQuery).each<System, SystemSet, Module>(
+            [&](EntityHandle e, System * s, const SystemSet * set, const Module * mod)
             {
                 if ((set && !set->enabled) || !s->enabled) {
                     return;
                 }
+                if (mod && !mod->enabled) {
+                    return;
+                }
+
                 systems[s->groupId].push_back(e.id);
             }
         );

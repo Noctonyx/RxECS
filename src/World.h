@@ -1,7 +1,9 @@
 #pragma once
+#include <deque>
 #include <mutex>
 #include <vector>
 #include <set>
+#include <stack>
 #include <typeinfo>
 #include <unordered_set>
 
@@ -123,6 +125,15 @@ namespace ecs
         virtual bool isComplete(JobHandle) const = 0;
         virtual void awaitCompletion(JobHandle) = 0;
     };
+
+    struct Module
+    {
+        friend class World;
+    private:
+        bool enabled = true;
+    };
+
+    struct HasModule : Relation { };
 
     class World
     {
@@ -274,6 +285,14 @@ namespace ecs
             this->jobInterface = jobi;
         }
 
+        template <class T>
+        entity_t createModule();
+
+        void pushModuleScope(entity_t module);
+        void popModuleScope();
+
+        void setModuleEnabled(entity_t module, bool enabled);
+
     protected:
         uint16_t getEntityArchetype(entity_t id) const;
         void moveEntity(entity_t id, uint16_t from, const ArchetypeTransition & trans);
@@ -324,6 +343,8 @@ namespace ecs
 
         std::mutex deferredMutex;
         JobInterface * jobInterface = nullptr;
+
+        std::stack<entity_t> moduleScope;
 
     public:
         ArchetypeManager am;
@@ -503,6 +524,15 @@ namespace ecs
     {
         std::set<component_id_t> with = {getComponentId<TArgs>()...};
         return createQuery(with);
+    }
+
+    template <class T>
+    entity_t World::createModule()
+    {
+        auto name = trimName(typeid(std::remove_reference_t<T>).name());
+        auto modId = newEntity(name.c_str()).add<ecs::Module>();
+
+        return modId;
     }
 
     class ActiveSystem
