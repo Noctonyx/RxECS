@@ -588,25 +588,25 @@ namespace ecs
 
     void World::executeSystemGroup(entity_t systemGroup)
     {
-        auto gd = getUpdate<SystemGroup>(systemGroup);
-        gd->executionSequence.clear();
+        auto group_details = getUpdate<SystemGroup>(systemGroup);
+        group_details->executionSequence.clear();
 
         float savedDelta = deltaTime_;
 
-        if (gd->fixed) {
-            gd->delta += deltaTime_;
-            deltaTime_ = gd->rate;
+        if (group_details->fixed) {
+            group_details->delta += deltaTime_;
+            deltaTime_ = group_details->rate;
         }
         do {
-            if (gd->fixed) {
-                if (gd->delta >= gd->rate) {
-                    gd->delta -= gd->rate;
+            if (group_details->fixed) {
+                if (group_details->delta >= group_details->rate) {
+                    group_details->delta -= group_details->rate;
                 } else {
                     break;
                 }
             }
             executeGroupsSystems(systemGroup);
-        } while (gd->fixed && gd->delta >= gd->rate);
+        } while (group_details->fixed && group_details->delta >= group_details->rate);
 
         deltaTime_ = savedDelta;
     }
