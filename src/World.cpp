@@ -702,7 +702,10 @@ namespace ecs
 
     void World::setModuleEnabled(const entity_t module, const bool enabled)
     {
-        getUpdate<Module>(module)->enabled = enabled;
+        auto m = getUpdate<Module>(module);
+        if (m) {
+            m->enabled = enabled;
+        }
         markSystemsDirty();
     }
 
