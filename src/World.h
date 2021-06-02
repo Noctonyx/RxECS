@@ -130,7 +130,7 @@ namespace ecs
     {
         friend class World;
     private:
-        bool enabled = true;
+        bool enabled = false;
     };
 
     struct HasModule : Relation { };

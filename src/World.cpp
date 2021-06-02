@@ -165,6 +165,10 @@ namespace ecs
 
     void World::destroy(const entity_t id)
     {
+        if(has<System>(id)) {           
+            deleteSystem(id);
+            return;
+        }
         const auto v = version(id);
         const auto i = index(id);
         (void) v;
@@ -454,6 +458,7 @@ namespace ecs
         if (isAlive(sys->query)) {
             deleteQuery(sys->query);
         }
+        remove<System>(s);
         destroy(s);
     }
 
