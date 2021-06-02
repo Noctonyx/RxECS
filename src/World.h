@@ -288,6 +288,9 @@ namespace ecs
         template <class T>
         entity_t createModule();
 
+        template<class T>
+        entity_t getModule();
+
         void pushModuleScope(entity_t module);
         void popModuleScope();
 
@@ -533,6 +536,14 @@ namespace ecs
         auto modId = newEntity(name.c_str()).add<ecs::Module>();
 
         return modId;
+    }
+
+    template <class T>
+    entity_t World::getModule()
+    {
+        auto name = trimName(typeid(std::remove_reference_t<T>).name());
+        auto mod = lookup(name);
+        return mod.id;
     }
 
     class ActiveSystem
