@@ -556,10 +556,10 @@ namespace ecs
     {
         entity_t module = getModule<T>();
 
-        if (!has<Module>(module)) {
+        if (!has<ModuleComponent>(module)) {
             return nullptr;
         }
-        auto m = getUpdate<Module>(module);
+        auto m = getUpdate<ModuleComponent>(module);
 
         return static_cast<T *>(m->modulePtr);
     }
