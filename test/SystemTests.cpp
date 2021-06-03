@@ -314,7 +314,7 @@ TEST_SUITE("Systems")
 
         world.newEntity("Group:1").set<ecs::SystemGroup>({1, false, 0.f, 0.f});
 
-        auto mod = world.newEntity().add<ecs::Module>();
+        auto mod = world.newEntity().add<ecs::ModuleComponent>();
 
         uint32_t c = 0;
         {

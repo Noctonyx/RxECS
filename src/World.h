@@ -126,7 +126,7 @@ namespace ecs
         virtual void awaitCompletion(JobHandle) = 0;
     };
 
-    struct Module
+    struct ModuleComponent
     {
         friend class World;
     private:
@@ -538,7 +538,7 @@ namespace ecs
     entity_t World::createModule()
     {
         auto name = trimName(typeid(std::remove_reference_t<T>).name());
-        auto modId = newEntity(name.c_str()).add<ecs::Module>();
+        auto modId = newEntity(name.c_str()).add<ecs::ModuleComponent>();
 
         return modId;
     }
@@ -577,6 +577,56 @@ namespace ecs
         ~ActiveSystem()
         {
             world->activeSystem = nullptr;
+        }
+    };
+
+    class ModuleBase
+    {
+    protected:
+        World * world_;
+        const entity_t moduleId;
+
+    public:
+        explicit ModuleBase(World * world, entity_t moduleId)
+            : world_(world)
+            , moduleId(moduleId)
+        {
+            assert(world_->isAlive(moduleId));
+            assert(world_->has<ModuleComponent>(moduleId));
+            world->setModuleObject(moduleId, this);
+        }
+
+        virtual ~ModuleBase()
+        {
+            world_->destroy(moduleId);
+        }
+
+        void enable()
+        {
+            world_->setModuleEnabled(moduleId, true);
+            onEnabled();
+        }
+
+        void disable()
+        {
+            world_->setModuleEnabled(moduleId, false);
+            onDisabled();
+        };
+
+        virtual void onDisabled() {}
+        virtual void onEnabled() {}
+
+        entity_t getModuleId() const
+        {
+            return moduleId;
+        }
+
+        template <class T>
+        T * getObject()
+        {
+            auto p = world_->getModuleObject<T>(moduleId);
+            assert(p);
+            return p;
         }
     };
 }

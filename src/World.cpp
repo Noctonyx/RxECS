@@ -49,7 +49,7 @@ namespace ecs
         // query to find systems
         systemQuery = createQuery<System>()
                       .withRelation<SetForSystem, SystemSet>()
-                      .withRelation<HasModule, Module>().id;
+                      .withRelation<HasModule, ModuleComponent>().id;
         systemGroupQuery = createQuery<SystemGroup>().id;
         streamQuery = createQuery<StreamComponent>().id;
     }
@@ -696,10 +696,10 @@ namespace ecs
 
     void World::setModuleObject(entity_t module, void * ptr)
     {
-        if(!has<Module>(module)) {
+        if(!has<ModuleComponent>(module)) {
             return;
         }
-        auto m = getUpdate<Module>(module);
+        auto m = getUpdate<ModuleComponent>(module);
         m->modulePtr = ptr;
     }
 
@@ -716,7 +716,7 @@ namespace ecs
 
     void World::setModuleEnabled(const entity_t module, const bool enabled)
     {
-        auto m = getUpdate<Module>(module);
+        auto m = getUpdate<ModuleComponent>(module);
         if (m) {
             m->enabled = enabled;
         }
@@ -836,8 +836,8 @@ namespace ecs
 
         std::unordered_map<entity_t, std::vector<entity_t>> systems;
 
-        getResults(systemQuery).each<System, SystemSet, Module>(
-            [&](EntityHandle e, System * s, const SystemSet * set, const Module * mod)
+        getResults(systemQuery).each<System, SystemSet, ModuleComponent>(
+            [&](EntityHandle e, System * s, const SystemSet * set, const ModuleComponent* mod)
             {
                 if ((set && !set->enabled) || !s->enabled) {
                     return;
