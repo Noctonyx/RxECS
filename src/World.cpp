@@ -694,6 +694,15 @@ namespace ecs
         return am.getArchetypeDetails(getEntityArchetype(id));
     }
 
+    void World::setModuleObject(entity_t module, void * ptr)
+    {
+        if(!has<Module>(module)) {
+            return;
+        }
+        auto m = getUpdate<Module>(module);
+        m->modulePtr = ptr;
+    }
+
     void World::pushModuleScope(entity_t module)
     {
         moduleScope.push(module);

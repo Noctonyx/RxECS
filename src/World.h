@@ -131,6 +131,7 @@ namespace ecs
         friend class World;
     private:
         bool enabled = false;
+        void * modulePtr;
     };
 
     struct HasModule : Relation { };
@@ -288,8 +289,12 @@ namespace ecs
         template <class T>
         entity_t createModule();
 
-        template<class T>
+        template <class T>
         entity_t getModule();
+
+        void setModuleObject(entity_t module, void * ptr);
+        template <class T>
+        T * getModuleObject();
 
         void pushModuleScope(entity_t module);
         void popModuleScope();
@@ -544,6 +549,19 @@ namespace ecs
         auto name = trimName(typeid(std::remove_reference_t<T>).name());
         auto mod = lookup(name);
         return mod.id;
+    }
+
+    template <class T>
+    T * World::getModuleObject()
+    {
+        entity_t module = getModule<T>();
+
+        if (!has<Module>(module)) {
+            return nullptr;
+        }
+        auto m = getUpdate<Module>(module);
+
+        return static_cast<T *>(m->modulePtr);
     }
 
     class ActiveSystem
