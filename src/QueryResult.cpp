@@ -1,3 +1,28 @@
+////////////////////////////////////////////////////////////////////////////////
+// MIT License
+//
+// Copyright (c) 2021.  Shane Hyde (shane@noctonyx.com)
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+////////////////////////////////////////////////////////////////////////////////
+
 #include "QueryResult.h"
 
 namespace ecs
@@ -79,22 +104,22 @@ namespace ecs
         , thread(thread)
     {
         total = 0;
-        for (auto t: tableList) {
-            size_t st = 0;
-            size_t cs = std::max(t->entities.size() / 40, 1024ULL);
-            while (st < t->entities.size()) {
-                auto & ch = tableViews.emplace_back();
-                ch.world = world;
-                ch.table = t;
-                ch.tableUpdateTimestamp = t->lastUpdateTimestamp;
-                ch.startRow = st;
-                ch.count = std::min(t->entities.size() - st, cs);
+        for (auto table: tableList) {
+            size_t startRow = 0;
+            size_t viewSize = std::max(table->entities.size() / 40, 1024ULL);
+            while (startRow < table->entities.size()) {
+                auto & newView = tableViews.emplace_back();
+                newView.world = world;
+                newView.table = table;
+                newView.tableUpdateTimestamp = table->lastUpdateTimestamp;
+                newView.startRow = startRow;
+                newView.count = std::min(table->entities.size() - startRow, viewSize);
                 for (auto w: with) {
                     components.insert(w);
                 }
-                st += ch.count;
+                startRow += newView.count;
             }
-            total += static_cast<uint32_t>(t->entities.size());
+            total += static_cast<uint32_t>(table->entities.size());
         }
         for (auto w: with) {
             components.insert(w);
