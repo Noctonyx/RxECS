@@ -82,6 +82,10 @@ namespace ecs
                 auto id = makeId(static_cast<uint32_t>(recycleStart),
                                  entities[recycleStart].version);
                 tables[am.emptyArchetype]->addEntity(id);
+                if (name) {
+                    nameIndex[name] = id;
+                    set<Name>(id, { name });
+                }
                 return EntityHandle{id, this};
             }
             recycleStart++;
@@ -177,6 +181,14 @@ namespace ecs
         assert(i < entities.size());
         assert(entities[i].version == v);
         assert(!has<Component>(id));
+
+        if(has<Name>(id)) {
+            auto n = get<Name>(id);
+            auto it = nameIndex.find(n->name);
+            if(it != nameIndex.end()) {
+                nameIndex.erase(it);
+            }
+        }
 
         const auto at = getEntityArchetype(id);
         tables[at]->removeEntity(id);

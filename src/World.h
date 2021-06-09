@@ -1,5 +1,6 @@
 #pragma once
 #include <deque>
+#include <map>
 #include <mutex>
 #include <vector>
 #include <set>
@@ -340,7 +341,7 @@ namespace ecs
         std::vector<DeferredCommand> deferredCommands;
 
         std::vector<entity_t> pipelineGroupSequence;
-        robin_hood::unordered_map<std::string, entity_t> nameIndex{};
+        std::map<std::string, entity_t> nameIndex{};
 
         std::unordered_map<component_id_t, void *> singletons;
 
