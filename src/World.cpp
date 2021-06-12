@@ -1,3 +1,28 @@
+////////////////////////////////////////////////////////////////////////////////
+// MIT License
+//
+// Copyright (c) 2021.  Shane Hyde (shane@noctonyx.com)
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+////////////////////////////////////////////////////////////////////////////////
+
 #include "World.h"
 
 #include <cassert>
@@ -48,26 +73,27 @@ namespace ecs
 
         // query to find systems
         systemQuery = createQuery<System>()
-                      .withRelation<SetForSystem, SystemSet>()
-                      .withRelation<HasModule, ModuleComponent>().id;
+            .withRelation<SetForSystem, SystemSet>()
+            .withRelation<HasModule, ModuleComponent>().id;
         systemGroupQuery = createQuery<SystemGroup>().id;
         streamQuery = createQuery<StreamComponent>().id;
     }
 
     World::~World()
     {
-        getResults(streamQuery).each<StreamComponent>([](EntityHandle, StreamComponent * s)
-        {
-            delete s->ptr;
-        });
+        getResults(streamQuery).each<StreamComponent>(
+            [](EntityHandle, StreamComponent * s) {
+                delete s->ptr;
+            }
+        );
 
-        for (auto & [k, v]: singletons) {
+        for (auto &[k, v]: singletons) {
             auto cd = getComponentDetails(k);
             cd->componentDestructor(v, cd->size, 1);
             delete[] static_cast<char *>(v);
         }
 
-        for (auto & [k, v]: tables) {
+        for (auto &[k, v]: tables) {
             delete v;
         }
         tables.clear();
@@ -79,12 +105,14 @@ namespace ecs
             if (entities[recycleStart].alive == false) {
                 entities[recycleStart].alive = true;
                 entities[recycleStart].archetype = am.emptyArchetype;
-                auto id = makeId(static_cast<uint32_t>(recycleStart),
-                                 entities[recycleStart].version);
+                auto id = makeId(
+                    static_cast<uint32_t>(recycleStart),
+                    entities[recycleStart].version
+                );
                 tables[am.emptyArchetype]->addEntity(id);
                 if (name) {
                     nameIndex[name] = id;
-                    set<Name>(id, { name });
+                    set<Name>(id, {name});
                 }
                 return EntityHandle{id, this};
             }
@@ -169,7 +197,7 @@ namespace ecs
 
     void World::destroy(const entity_t id)
     {
-        if(has<System>(id)) {           
+        if (has<System>(id)) {
             deleteSystem(id);
             return;
         }
@@ -182,10 +210,10 @@ namespace ecs
         assert(entities[i].version == v);
         assert(!has<Component>(id));
 
-        if(has<Name>(id)) {
+        if (has<Name>(id)) {
             auto n = get<Name>(id);
             auto it = nameIndex.find(n->name);
-            if(it != nameIndex.end()) {
+            if (it != nameIndex.end()) {
                 nameIndex.erase(it);
             }
         }
@@ -401,18 +429,20 @@ namespace ecs
 
     component_id_t World::createDynamicComponent(entity_t entityId)
     {
-        set<Component>(entityId, {
-                           description(entityId),
-                           sizeof(std::remove_reference_t<DynamicComponent>),
-                           alignof(std::remove_reference_t<DynamicComponent>),
-                           componentConstructor<std::remove_reference_t<DynamicComponent>>,
-                           componentDestructor<std::remove_reference_t<DynamicComponent>>,
-                           componentCopy<std::remove_reference_t<DynamicComponent>>,
-                           componentMove<std::remove_reference_t<DynamicComponent>>,
-                           false,
-                           componentAllocator<std::remove_reference_t<DynamicComponent>>,
-                           componentDeallocator<std::remove_reference_t<DynamicComponent>>
-                       });
+        set<Component>(
+            entityId, {
+                description(entityId),
+                sizeof(std::remove_reference_t<DynamicComponent>),
+                alignof(std::remove_reference_t<DynamicComponent>),
+                componentConstructor<std::remove_reference_t<DynamicComponent>>,
+                componentDestructor<std::remove_reference_t<DynamicComponent>>,
+                componentCopy<std::remove_reference_t<DynamicComponent>>,
+                componentMove<std::remove_reference_t<DynamicComponent>>,
+                false,
+                componentAllocator<std::remove_reference_t<DynamicComponent>>,
+                componentDeallocator<std::remove_reference_t<DynamicComponent>>
+            }
+        );
 
         return entityId;
     }
@@ -481,36 +511,34 @@ namespace ecs
 
         auto aq = get<Query>(q);
 
-        return QueryResult(this, aq->tables, aq->with, aq->relations, aq->singleton,
-                           aq->inheritance, aq->thread, aq->filterComponents);
+        return QueryResult(
+            this, aq->tables, aq->with, aq->relations, aq->singleton,
+            aq->inheritance, aq->thread, aq->filterComponents
+        );
     }
 
-    void World::executeSystem(systemid_t sys)
+    std::optional<JobInterface::JobHandle> World::executeSystem(systemid_t sys)
     {
         if (isAlive(sys)) {
-#if 0
-            auto name = get<Name>(sys);
-            const char* n;
-            if(name) {
-                n = name->name.c_str();
-            } else {
-                n = "System";
-            }
-#endif
-            //OPTICK_EVENT("ExecuteSystem")
-
             if (auto system = getUpdate<System>(sys); system) {
-                const auto start = std::chrono::high_resolution_clock::now();
-                ActiveSystem as(this, system);
+                system->startTime = std::chrono::high_resolution_clock::now();
+                //ActiveSystem as(this, system);
 
                 if (system->query) {
                     auto res = getResults(system->query);
                     system->count = res.count();
-                    if (system->queryProcessor) {
+                    if (system->queryProcessor && system->count > 0) {
                         system->queryProcessor(res);
-                    } else if (system->executeProcessor) {
-                        if (system->count == 0) {
-                            system->executeProcessor(this);
+                    } else if (system->executeIfNoneProcessor && system->count == 0) {
+                        if(system->thread) {
+                            return jobInterface->create([=, this](){
+                                system->executeIfNoneProcessor(this);
+                                const auto end = std::chrono::high_resolution_clock::now();
+                                system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
+                                    float>(end - system->startTime).count();
+                            });
+                        } else {
+                            system->executeIfNoneProcessor(this);
                         }
                     }
                 } else if (system->stream) {
@@ -519,19 +547,29 @@ namespace ecs
                     system->streamProcessor(getStream(system->stream));
                 } else {
                     system->count = 1;
-                    system->executeProcessor(this);
+                    if(system->thread) {
+                        return jobInterface->create([=, this](){
+                            system->executeProcessor(this);
+                            const auto end = std::chrono::high_resolution_clock::now();
+                            system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
+                                float>(end - system->startTime).count();
+                        });
+                    } else {
+                        system->executeProcessor(this);
+                    }
                 }
                 const auto end = std::chrono::high_resolution_clock::now();
                 system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
-                    float>(end - start).count();
+                    float>(end - system->startTime).count();
             }
         }
+        return std::nullopt;
     }
-
 
     void World::executeGroupsSystems(entity_t systemGroup)
     {
         std::unordered_map<component_id_t, uint32_t> writeCounts{};
+        std::unordered_map<component_id_t, uint32_t> streamWriteCounts{};
         std::unordered_map<entity_t, uint32_t> labelCounts{};
         std::unordered_map<entity_t, uint32_t> labelPreCounts{};
 
@@ -539,13 +577,16 @@ namespace ecs
 
         auto grp = getUpdate<SystemGroup>(systemGroup);
 
-        for (auto & [k, v]: grp->writeCounts) {
+        for (auto &[k, v]: grp->writeCounts) {
             writeCounts[k] = v;
         }
-        for (auto & [k, v]: grp->labelPreCounts) {
+        for (auto &[k, v]: grp->streamWriteCounts) {
+            streamWriteCounts[k] = v;
+        }
+        for (auto &[k, v]: grp->labelPreCounts) {
             labelPreCounts[k] = v;
         }
-        for (auto & [k, v]: grp->labelCounts) {
+        for (auto &[k, v]: grp->labelCounts) {
             labelCounts[k] = v;
         }
         for (auto & s: grp->systems) {
@@ -554,8 +595,8 @@ namespace ecs
         uint32_t sentinel = 0;
 
         while (!systemsToRun.empty()) {
-            auto entity = systemsToRun.front();
-            auto system = getUpdate<System>(entity);
+            auto system_entity = systemsToRun.front();
+            auto system = getUpdate<System>(system_entity);
 
             bool canProcess = true;
 
@@ -592,19 +633,24 @@ namespace ecs
                 continue;
             }
             sentinel = 0;
-            executeSystem(entity);
-            grp->executionSequence.push_back(entity);
+            auto jr = executeSystem(system_entity);
+            if (jr == std::nullopt) {
+                grp->executionSequence.push_back(system_entity);
 
-            for (auto & af: system->labels) {
-                labelCounts[af]--;
+                for (auto & af: system->labels) {
+                    labelCounts[af]--;
+                }
+                for (auto & bf: system->befores) {
+                    labelPreCounts[bf]--;
+                }
+                for (auto & bf: system->writes) {
+                    writeCounts[bf]--;
+                }
+                for (auto & bf: system->streamWrites) {
+                    streamWriteCounts[bf]--;
+                }
+                systemsToRun.pop_front();
             }
-            for (auto & bf: system->befores) {
-                labelPreCounts[bf]--;
-            }
-            for (auto & bf: system->writes) {
-                writeCounts[bf]--;
-            }
-            systemsToRun.pop_front();
         }
         //const auto end = std::chrono::high_resolution_clock::now();
     }
@@ -657,10 +703,11 @@ namespace ecs
             gd->lastTime = gd->lastTime * 0.9f + 0.1f * runTime;
         }
 
-        getResults(streamQuery).each<StreamComponent>([](EntityHandle, StreamComponent * s)
-        {
-            s->ptr->clear();
-        });
+        getResults(streamQuery).each<StreamComponent>(
+            [](EntityHandle, StreamComponent * s) {
+                s->ptr->clear();
+            }
+        );
     }
 
     void World::executeDeferred()
@@ -676,14 +723,13 @@ namespace ecs
             case DeferredCommandType::Remove:
                 remove(command.entity, command.component);
                 break;
-            case DeferredCommandType::Set:
-                {
-                    set(command.entity, command.component, command.ptr);
-                    auto cd = getComponentDetails(command.component);
-                    cd->componentDestructor(command.ptr, cd->size, 1);
+            case DeferredCommandType::Set: {
+                set(command.entity, command.component, command.ptr);
+                auto cd = getComponentDetails(command.component);
+                cd->componentDestructor(command.ptr, cd->size, 1);
 
-                    delete[] static_cast<char *>(command.ptr);
-                }
+                delete[] static_cast<char *>(command.ptr);
+            }
                 break;
             }
         }
@@ -708,7 +754,7 @@ namespace ecs
 
     void World::setModuleObject(entity_t module, void * ptr)
     {
-        if(!has<ModuleComponent>(module)) {
+        if (!has<ModuleComponent>(module)) {
             return;
         }
         auto m = getUpdate<ModuleComponent>(module);
@@ -759,8 +805,8 @@ namespace ecs
         /* This will only be 0 during world bootstrap, ie when we are adding queryquery */
         if (queryQuery) {
             getResults(queryQuery)
-                .each<Query>([&table, &ad](EntityHandle, Query * aq)
-                    {
+                .each<Query>(
+                    [&table, &ad](EntityHandle, Query * aq) {
                         assert(aq);
                         if (aq->interestedInArchetype(ad)) {
                             aq->tables.push_back(table);
@@ -799,6 +845,7 @@ namespace ecs
         grp->labelPreCounts.clear();
         grp->labelCounts.clear();
         grp->writeCounts.clear();
+        grp->streamWriteCounts.clear();
 
         std::deque<std::pair<entity_t, const System *>> toProcess;
         std::unordered_map<entity_t, std::set<entity_t>> ready;
@@ -812,7 +859,7 @@ namespace ecs
             }
         }
 
-        for (auto & [e, s]: toProcess) {
+        for (auto &[e, s]: toProcess) {
             for (auto & l: s->labels) {
                 grp->labelCounts[l]++;
             }
@@ -823,6 +870,10 @@ namespace ecs
 
             for (auto & l: s->writes) {
                 grp->writeCounts[l]++;
+            }
+
+            for (auto & l: s->streamWrites) {
+                grp->streamWriteCounts[l]++;
             }
         }
     }
@@ -849,8 +900,7 @@ namespace ecs
         std::unordered_map<entity_t, std::vector<entity_t>> systems;
 
         getResults(systemQuery).each<System, SystemSet, ModuleComponent>(
-            [&](EntityHandle e, System * s, const SystemSet * set, const ModuleComponent* mod)
-            {
+            [&](EntityHandle e, System * s, const SystemSet * set, const ModuleComponent * mod) {
                 if ((set && !set->enabled) || !s->enabled) {
                     return;
                 }
@@ -865,17 +915,17 @@ namespace ecs
         std::vector<std::pair<SystemGroup *, entity_t>> grps;
 
         getResults(systemGroupQuery).each<SystemGroup>(
-            [&grps](EntityHandle e, SystemGroup * g)
-            {
+            [&grps](EntityHandle e, SystemGroup * g) {
                 grps.push_back({g, e.id});
             }
         );
 
-        std::ranges::sort(grps, [](std::pair<SystemGroup *, entity_t> a,
-                                   std::pair<SystemGroup *, entity_t> b)
-        {
-            return a.first->sequence < b.first->sequence;
-        });
+        std::ranges::sort(
+            grps, [](std::pair<SystemGroup *, entity_t> a,
+                     std::pair<SystemGroup *, entity_t> b) {
+                return a.first->sequence < b.first->sequence;
+            }
+        );
 
         pipelineGroupSequence.clear();
         for (auto gg: grps) {

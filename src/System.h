@@ -1,3 +1,28 @@
+////////////////////////////////////////////////////////////////////////////////
+// MIT License
+//
+// Copyright (c) 2021.  Shane Hyde (shane@noctonyx.com)
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 #include <deque>
 #include <unordered_set>
@@ -62,6 +87,7 @@ namespace ecs
         size_t deferredCount = 0LL;
 
         std::unordered_map<component_id_t, uint32_t> writeCounts{};
+        std::unordered_map<component_id_t, uint32_t> streamWriteCounts{};
         std::unordered_map<entity_t, uint32_t> labelCounts{};
         std::unordered_map<entity_t, uint32_t> labelPreCounts{};
 
@@ -75,6 +101,7 @@ namespace ecs
         World* world;
         std::function<void(QueryResult&)> queryProcessor;
         std::function<void(World *)> executeProcessor;
+        std::function<void(World *)> executeIfNoneProcessor;
         std::function<void(Stream *)> streamProcessor;
         bool enabled = true;
 
@@ -84,6 +111,9 @@ namespace ecs
 
         std::unordered_set<component_id_t> reads;
         std::unordered_set<component_id_t> writes;
+
+        std::unordered_set<component_id_t> streamReads;
+        std::unordered_set<component_id_t> streamWrites;
 
         entity_t groupId = 0;
 
@@ -95,6 +125,7 @@ namespace ecs
         component_id_t stream = 0;
         size_t count = 0;
         float executionTime;
+        std::chrono::time_point<std::chrono::steady_clock> startTime;
         //bool dirtyOrder = true;
     };
 

@@ -1,3 +1,28 @@
+////////////////////////////////////////////////////////////////////////////////
+// MIT License
+//
+// Copyright (c) 2021.  Shane Hyde (shane@noctonyx.com)
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+////////////////////////////////////////////////////////////////////////////////
+
 #include <random>
 
 #include "doctest.h"
@@ -433,5 +458,152 @@ TEST_SUITE("World")
             e.removeDynamic(dc);
             assert(!e.hasDynamic(dc));
         }
+    }
+
+    TEST_CASE("Component Description"){
+        ecs::World w;
+
+        auto e = w.newEntity("Fred");
+
+        CHECK(e.description() == "Fred");
+    }
+
+    TEST_CASE("Entity operator bool") {
+        ecs::World w;
+
+        auto e = w.newEntity("Fred");
+
+        CHECK(e);
+    }
+
+    TEST_CASE("Entity Iterator")
+    {
+        ecs::World w;
+
+        struct C1{};
+        struct C2{};
+
+        auto e = w.newEntity().add<C1>(). add<C2>();
+        int j = 0;
+        for(auto c: e) {
+            j++;
+            (void)c;
+        }
+        CHECK(j == 2);
+    }
+
+    TEST_CASE("Delete with name")
+    {
+        ecs::World w;
+
+        auto e1 = w.newEntity("Name1");
+        auto e2 = w.newEntityReplace("Name1");
+
+        CHECK(!e1);
+        CHECK(e2);
+        CHECK(w.lookup("Name1") == e2);
+    }
+
+    TEST_CASE("Remove non-existent component")
+    {
+        ecs::World w;
+
+        auto e = w.newEntity();
+        e.remove<TestComponent>();
+
+        CHECK(!e.has<TestComponent>());
+    }
+
+    TEST_CASE("Get from dead entity")
+    {
+        ecs::World w;
+
+        auto e = w.newEntity();
+        e.remove<TestComponent>();
+
+        e.destroy();
+
+        CHECK(e.get<TestComponent>() == nullptr);
+        CHECK(e.getUpdate<TestComponent>() == nullptr);
+    }
+
+    TEST_CASE("Singletons")
+    {
+        struct C1 {int x;};
+        ecs::World w;
+
+        w.setSingleton<C1>({9});
+        w.addSingleton<C1>();
+
+        CHECK(w.getSingleton<C1>()->x == 9);
+
+        w.removeSingleton<C1>();
+        CHECK(!w.hasSingleton<C1>());
+        w.removeSingleton<C1>();
+
+        CHECK(w.getSingletonUpdate<C1>() == nullptr);
+    }
+
+    TEST_CASE("Get Related")
+    {
+        struct C1 {int x;};
+        struct C2: ecs::Relation {
+
+        };
+
+        ecs::World w;
+
+        auto e1 = w.newEntity();
+        auto e2 = w.newEntity();
+        e2.set<C1>({7});
+        e1.set<C2>({{e2.id}});
+
+        CHECK(e1.getRelated<C2, C1>()->x == 7);
+        CHECK(e1.getRelatedEntity<C2>() == e2);
+
+        e1.remove<C2>();
+        CHECK(e1.getRelated<C2, C1>() == nullptr);
+        CHECK(!e1.getRelatedEntity<C2>().isAlive());
+    }
+
+    TEST_CASE("World Iterator")
+    {
+        struct C1 {int x;};
+        //struct C2 {int y;};
+        //struct C3 {int z;};
+
+        ecs::World w;
+
+        auto e1 = w.newEntity().add<C1>();
+        //auto e2 = w.newEntity().add<C2>();
+        //auto e3 = w.newEntity().add<C3>();
+
+        for(auto & a: w) {
+            auto t = w.getTableForArchetype(a.id);
+            if(w.getEntityArchetypeDetails(e1).id == a.id){
+
+                CHECK(t->hasComponent(w.getComponentId<C1>()));
+
+                size_t c = 0;
+                for(auto e: *t){
+                    c++;
+                }
+                CHECK(c == 1);
+            }
+        }
+    }
+
+    TEST_CASE("Table Names")
+    {
+        ecs::World w;
+
+        auto e = w.newEntity().add<TestComponent2>().add<TestComponent3>();
+
+        auto aid = w.getEntityArchetypeDetails(e).id;
+        auto table = w.getTableForArchetype(aid);
+        auto table0 = w.getTableForArchetype(0);
+
+        CHECK(table->description() == "TestComponent2|TestComponent3");
+        CHECK(table0->description() == "Empty");
     }
 }

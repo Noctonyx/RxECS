@@ -36,6 +36,7 @@ add_library(RxECS STATIC
     test/TestComponents.h 
     test/SystemTests.cpp 
     test/StreamTests.cpp
+    test/ModuleTests.cpp
     )
 
 target_link_libraries(RxECS_tests PRIVATE RxECS)
