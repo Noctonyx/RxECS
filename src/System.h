@@ -93,6 +93,9 @@ namespace ecs
 
         std::vector<systemid_t> systems{};
         std::vector<systemid_t> executionSequence{};
+
+        std::function<void(void)> onBegin{};
+        std::function<void(void)> onEnd{};
     };
 
     struct System

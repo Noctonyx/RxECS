@@ -27,6 +27,7 @@
 
 #include <cassert>
 #include <deque>
+#include <atomic>
 
 #include "Query.h"
 #include "QueryResult.h"
@@ -530,13 +531,15 @@ namespace ecs
                     if (system->queryProcessor && system->count > 0) {
                         system->queryProcessor(res);
                     } else if (system->executeIfNoneProcessor && system->count == 0) {
-                        if(system->thread) {
-                            return jobInterface->create([=, this](){
-                                system->executeIfNoneProcessor(this);
-                                const auto end = std::chrono::high_resolution_clock::now();
-                                system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
-                                    float>(end - system->startTime).count();
-                            });
+                        if (system->thread) {
+                            return jobInterface->create(
+                                [=, this]() {
+                                    system->executeIfNoneProcessor(this);
+                                    const auto end = std::chrono::high_resolution_clock::now();
+                                    system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
+                                        float>(end - system->startTime).count();
+                                }
+                            );
                         } else {
                             system->executeIfNoneProcessor(this);
                         }
@@ -547,13 +550,15 @@ namespace ecs
                     system->streamProcessor(getStream(system->stream));
                 } else {
                     system->count = 1;
-                    if(system->thread) {
-                        return jobInterface->create([=, this](){
-                            system->executeProcessor(this);
-                            const auto end = std::chrono::high_resolution_clock::now();
-                            system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
-                                float>(end - system->startTime).count();
-                        });
+                    if (system->thread) {
+                        return jobInterface->create(
+                            [=, this]() {
+                                system->executeProcessor(this);
+                                const auto end = std::chrono::high_resolution_clock::now();
+                                system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
+                                    float>(end - system->startTime).count();
+                            }
+                        );
                     } else {
                         system->executeProcessor(this);
                     }
@@ -568,6 +573,8 @@ namespace ecs
 
     void World::executeGroupsSystems(entity_t systemGroup)
     {
+        using BackgroundSystem = std::tuple<JobInterface::JobHandle, System *, entity_t>;
+
         std::unordered_map<component_id_t, uint32_t> writeCounts{};
         std::unordered_map<component_id_t, uint32_t> streamWriteCounts{};
         std::unordered_map<entity_t, uint32_t> labelCounts{};
@@ -590,9 +597,21 @@ namespace ecs
             labelCounts[k] = v;
         }
         for (auto & s: grp->systems) {
-            systemsToRun.push_back(s);
+            if (get<System>(s)->thread) {
+                systemsToRun.push_back(s);
+            }
+        }
+        for (auto & s: grp->systems) {
+            if (!get<System>(s)->thread) {
+                systemsToRun.push_back(s);
+            }
+        }
+        if(systemsToRun.empty()) {
+            return;
         }
         uint32_t sentinel = 0;
+
+        std::deque<BackgroundSystem> inFlights{};
 
         while (!systemsToRun.empty()) {
             auto system_entity = systemsToRun.front();
@@ -601,10 +620,40 @@ namespace ecs
             bool canProcess = true;
 
             if (sentinel > systemsToRun.size()) {
-                for (auto xx: systemsToRun) {
-                    printf("%s\n", description(xx).c_str());
+                if (inFlights.empty()) {
+                    for (auto xx: systemsToRun) {
+                        printf("%s\n", description(xx).c_str());
+                    }
+                    throw std::runtime_error("Systems define a cycle and cannot run");
+                } else {
+//                    YieldProcessor();
+                    std::this_thread::yield();
                 }
-                throw std::runtime_error("Systems define a cycle and cannot run");
+            }
+
+            if (!inFlights.empty()) {
+                auto it = inFlights.begin();
+                while (it != inFlights.end()) {
+                    auto &[j, sys, syse] = *it;
+
+                    if (jobInterface->isComplete(j)) {
+                        for (auto & af: sys->labels) {
+                            labelCounts[af]--;
+                        }
+                        for (auto & bf: sys->befores) {
+                            labelPreCounts[bf]--;
+                        }
+                        for (auto & bf: sys->writes) {
+                            writeCounts[bf]--;
+                        }
+                        for (auto & bf: sys->streamWrites) {
+                            streamWriteCounts[bf]--;
+                        }
+                        inFlights.erase(it);
+                        break;
+                    }
+                    it++;
+                }
             }
 
             for (auto & af: system->afters) {
@@ -625,6 +674,20 @@ namespace ecs
                 }
             }
 
+            for (auto & af: system->writes) {
+                for (auto &[j, s, e]: inFlights) {
+                    if (s->writes.contains(af)) {
+                        canProcess = false;
+                    }
+                }
+            }
+
+            for (auto & af: system->streamReads) {
+                if (streamWriteCounts[af] > 0) {
+                    canProcess = false;
+                }
+            }
+
             if (!canProcess) {
                 auto ns = systemsToRun.front();
                 systemsToRun.pop_front();
@@ -634,9 +697,12 @@ namespace ecs
             }
             sentinel = 0;
             auto jr = executeSystem(system_entity);
-            if (jr == std::nullopt) {
-                grp->executionSequence.push_back(system_entity);
-
+            grp->executionSequence.push_back(system_entity);
+            if (jr != std::nullopt) {
+                inFlights.emplace_back(jr.value(), system, system_entity);
+                jobInterface->schedule(jr.value());
+                //jobInterface->awaitCompletion(jr.value());
+            } else {
                 for (auto & af: system->labels) {
                     labelCounts[af]--;
                 }
@@ -649,8 +715,26 @@ namespace ecs
                 for (auto & bf: system->streamWrites) {
                     streamWriteCounts[bf]--;
                 }
-                systemsToRun.pop_front();
             }
+            systemsToRun.pop_front();
+        }
+
+        while (!inFlights.empty()) {
+            auto &[j, sys, syse] = inFlights.front();
+            jobInterface->awaitCompletion(j);
+            for (auto & af: sys->labels) {
+                labelCounts[af]--;
+            }
+            for (auto & bf: sys->befores) {
+                labelPreCounts[bf]--;
+            }
+            for (auto & bf: sys->writes) {
+                writeCounts[bf]--;
+            }
+            for (auto & bf: sys->streamWrites) {
+                streamWriteCounts[bf]--;
+            }
+            inFlights.pop_front();
         }
         //const auto end = std::chrono::high_resolution_clock::now();
     }
@@ -658,6 +742,11 @@ namespace ecs
     void World::executeSystemGroup(entity_t systemGroup)
     {
         auto group_details = getUpdate<SystemGroup>(systemGroup);
+        if (group_details->onBegin) {
+            group_details->onBegin();
+        }
+
+        //OPTICK_EVENT()
         group_details->executionSequence.clear();
 
         float savedDelta = deltaTime_;
@@ -678,6 +767,9 @@ namespace ecs
         } while (group_details->fixed && group_details->delta >= group_details->rate);
 
         deltaTime_ = savedDelta;
+        if (group_details->onEnd) {
+            group_details->onEnd();
+        }
     }
 
     void World::step(float delta)
