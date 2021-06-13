@@ -86,6 +86,15 @@ namespace ecs
         return *this;
     }
 #endif
+    SystemBuilder & SystemBuilder::withInterval(float v)
+    {
+        world->markSystemsDirty();
+
+        auto sp = world->getUpdate<System>(id);
+        sp->interval = v;
+        return *this;
+    }
+
     SystemBuilder & SystemBuilder::inGroup(entity_t group)
     {
         world->markSystemsDirty();

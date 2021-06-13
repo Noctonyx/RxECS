@@ -93,6 +93,8 @@ namespace ecs
         template <class ... TArgs>
         SystemBuilder& withStreamWrite();
 
+        SystemBuilder& withInterval(float v);
+
         SystemBuilder& inGroup(entity_t group);
         SystemBuilder& inGroup(const char * name);
 

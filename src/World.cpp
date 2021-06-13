@@ -93,10 +93,11 @@ namespace ecs
             cd->componentDestructor(v, cd->size, 1);
             delete[] static_cast<char *>(v);
         }
-
+#if 0
         for (auto &[k, v]: tables) {
             delete v;
         }
+#endif
         tables.clear();
     }
 
@@ -126,7 +127,7 @@ namespace ecs
 
         auto & x = entities.emplace_back();
         x.alive = true;
-        x.version = 0;
+        x.version = v;
         x.archetype = am.emptyArchetype;
         x.updateSequence = 0;
         auto id = makeId(i, v);
@@ -162,7 +163,7 @@ namespace ecs
         tables[getEntityArchetype(e.id)]->removeEntity(e.id);
 
         ensureTableForArchetype(trans.to_at);
-        Table::copyEntity(this, tables[prefabAt], tables[trans.to_at], prefab, e.id, trans);
+        Table::copyEntity(this, tables[prefabAt].get(), tables[trans.to_at].get(), prefab, e.id, trans);
         entities[index(e.id)].archetype = trans.to_at;
         return e;
     }
@@ -204,6 +205,11 @@ namespace ecs
             deleteSystem(id);
             return;
         }
+
+        if(has<Component>(id)) {
+            removeDynamicComponent(id);
+        }
+
         const auto v = version(id);
         const auto i = index(id);
         (void) v;
@@ -239,7 +245,7 @@ namespace ecs
 
     void World::add(const entity_t id, const component_id_t componentId)
     {
-        if(has(id, componentId)) {
+        if (has(id, componentId)) {
             return;
         }
         const auto at = getEntityArchetype(id);
@@ -294,7 +300,7 @@ namespace ecs
         }
         auto at = getEntityArchetype(id);
         auto table_it = tables.find(at);
-        auto table = table_it->second;
+        auto table = table_it->second.get();
 
         const void * ptr = table->getComponent(id, componentId);
         if (ptr || !inherited) {
@@ -321,7 +327,7 @@ namespace ecs
         }
 
         auto at = getEntityArchetype(id);
-        auto table = tables[at];
+        Table * table = tables[at].get();
 
         void * ptr = table->getUpdateComponent(id, componentId);
         setEntityUpdateSequence(id);
@@ -342,7 +348,7 @@ namespace ecs
             at = getEntityArchetype(id);
         }
         assert(tables.contains(at));
-        auto table = tables[at];
+        auto table = tables[at].get();
 
         table->setComponent(id, componentId, ptr);
         setEntityUpdateSequence(id);
@@ -456,6 +462,40 @@ namespace ecs
         return entityId;
     }
 
+    void World::removeDynamicComponent(entity_t entityId)
+    {
+        if(!has<Component>(entityId)) {
+            return;
+        }
+
+        auto q = createQuery({ entityId });
+        auto res = getResults(q.id);
+        assert(res.count() == 0);
+        deleteQuery(q.id);
+
+        std::vector<uint16_t> removeList;
+
+        for(auto & [k, t]: tables) {
+
+            if(t == nullptr || t->hasComponent(entityId)) {
+                removeList.push_back(k);
+            }
+        }
+
+        for(auto & r: removeList) {
+            auto at = am.archetypes[r];
+            am.archetypeMap.erase(at.hash_value);
+            //auto tab = tables[r];
+            //delete tab;
+            removeTableFromActiveQueries(tables[r].get());
+            tables.erase(r);
+        }
+        am.addCache.clear();
+        am.removeCache.clear();
+
+        remove<Component>(entityId);
+    }
+
     QueryBuilder World::createQuery(const std::set<component_id_t> & with)
     {
         auto q = newEntity();
@@ -530,6 +570,16 @@ namespace ecs
     {
         if (isAlive(sys)) {
             if (auto system = getUpdate<System>(sys); system) {
+
+                if(system->interval > 0.01f) {
+                    system->intervalElapsed += deltaTime_;
+                    if(system->intervalElapsed < system->interval) {
+                        system->count = 0;
+                        system->executionTime = 0.f;
+                        return std::nullopt;
+                    }
+                    system->intervalElapsed -= system->interval;
+                }
                 system->startTime = std::chrono::high_resolution_clock::now();
                 //ActiveSystem as(this, system);
 
@@ -614,7 +664,7 @@ namespace ecs
                 systemsToRun.push_back(s);
             }
         }
-        if(systemsToRun.empty()) {
+        if (systemsToRun.empty()) {
             return;
         }
         uint32_t sentinel = 0;
@@ -776,7 +826,7 @@ namespace ecs
             executeGroupsSystems(systemGroup);
         } while (group_details->fixed && group_details->delta >= group_details->rate);
 
-        for(auto & sid: group_details->executionSequence) {
+        for (auto & sid: group_details->executionSequence) {
             auto sp = getUpdate<System>(sid);
             sp->lastRunSequence = updateSequence;
         }
@@ -902,7 +952,7 @@ namespace ecs
 
         ensureTableForArchetype(trans.to_at);
 
-        Table::moveEntity(this, tables[from], tables[trans.to_at], id, trans);
+        Table::moveEntity(this, tables[from].get(), tables[trans.to_at].get(), id, trans);
     }
 
     void World::addTableToActiveQueries(Table * table, uint16_t aid)
@@ -922,16 +972,33 @@ namespace ecs
         }
     }
 
+    void World::removeTableFromActiveQueries(Table* table)
+    {
+        if (queryQuery) {
+            getResults(queryQuery)
+                .each<Query>(
+                    [&table](EntityHandle, Query* aq) {
+                        assert(aq);
+                        auto it = std::find(aq->tables.begin(), aq->tables.end(), table);
+                        if(it != aq->tables.end()) {
+                            aq->tables.erase(it);
+                        }
+                    }
+            );
+        }
+    }
+
     void World::ensureTableForArchetype(uint16_t aid)
     {
         if (tables.find(aid) != tables.end()) {
             return;
         }
 
-        auto t = new Table(this, aid);
-        tables[aid] = t;
+        auto t = std::make_unique<Table>(this, aid);
+        Table* ptr = t.get();
+        tables[aid] = std::move(t);
 
-        addTableToActiveQueries(t, aid);
+        addTableToActiveQueries(ptr, aid);
     }
 
     WorldIterator World::begin()
@@ -1048,7 +1115,7 @@ namespace ecs
     void World::setEntityUpdateSequence(entity_t id)
     {
         assert(isAlive(id));
-        const auto v = version(id);
+        //const auto v = version(id);
         const auto i = index(id);
         entities[i].updateSequence = updateSequence;
     }

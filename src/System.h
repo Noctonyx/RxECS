@@ -30,11 +30,13 @@
 
 #include "Entity.h"
 #include "QueryResult.h"
-//#include "QueryResult.h"
+#include "Component.h"
 
 namespace ecs
 {
     class World;
+    struct Stream;
+
 #if 0
     struct Pipeline
     {
@@ -131,5 +133,8 @@ namespace ecs
         std::chrono::time_point<std::chrono::steady_clock> startTime;
 
         uint64_t lastRunSequence = 0;
+
+        float interval = 0.f;
+        float intervalElapsed = 0.f;
     };
 }

@@ -43,27 +43,26 @@
 #include "Table.h"
 #include "SystemBuilder.h"
 
-
 namespace ecs
 {
     struct System;
 
     namespace type_helper
     {
-        template <typename T>
+        template<typename T>
         struct type_id_ptr
         {
             static const T * const id;
             static const entity_t entityId;
         };
 
-        template <typename T>
+        template<typename T>
         const T * const type_id_ptr<T>::id = nullptr;
     }
 
     using type_id_t = const void *;
 
-    template <typename T>
+    template<typename T>
     constexpr auto type_id() noexcept -> type_id_t
     {
         return &type_helper::type_id_ptr<T>::id;
@@ -81,7 +80,9 @@ namespace ecs
         bool alive;
     };
 
-    struct Prefab { };
+    struct Prefab
+    {
+    };
 
     struct WorldIterator
     {
@@ -99,7 +100,7 @@ namespace ecs
             return it != other.it;
         }
 
-        Archetype & operator*()
+        Archetype & operator*() const
         {
             return *it;
         }
@@ -127,7 +128,7 @@ namespace ecs
         }
     };
 
-    enum class DeferredCommandType: uint8_t
+    enum class DeferredCommandType : uint8_t
     {
         Destroy,
         Add,
@@ -161,7 +162,9 @@ namespace ecs
         void * modulePtr;
     };
 
-    struct HasModule : Relation { };
+    struct HasModule : Relation
+    {
+    };
 
     class World
     {
@@ -185,86 +188,87 @@ namespace ecs
         void destroy(entity_t id);
         void destroyDeferred(entity_t id);
 
-        template <typename T>
+        template<typename T>
         void add(entity_t id);
         void add(entity_t id, component_id_t componentId);
 
-        template <typename T>
+        template<typename T>
         void addDeferred(entity_t id);
         void addDeferred(entity_t id, component_id_t componentId);
 
-        template <typename T>
+        template<typename T>
         bool has(entity_t id);
         bool has(entity_t id, component_id_t componentId);
 
-        template <typename T>
+        template<typename T>
         void remove(entity_t id);
         void remove(entity_t id, component_id_t componentId);
 
-        template <typename T>
+        template<typename T>
         void removeDeferred(entity_t id);
         void removeDeferred(entity_t id, component_id_t componentId);
 
-        template <typename T>
+        template<typename T>
         const T * get(entity_t id, bool inherit = false);
-        template <typename T>
+        template<typename T>
         T * getUpdate(entity_t id);
 
-        template <typename T, typename U>
+        template<typename T, typename U>
         const U * getRelated(entity_t id);
 
-        template <typename T>
+        template<typename T>
         EntityHandle getRelatedEntity(entity_t id);
 
         const void * get(entity_t id, component_id_t componentId, bool inherited = false);
         void * getUpdate(entity_t id, component_id_t componentId);
 
-        template <typename T>
+        template<typename T>
         void set(entity_t id, const T & value);
         void set(entity_t id, component_id_t componentId, const void * ptr);
 
-        template <typename T>
+        template<typename T>
         void setDeferred(entity_t id, const T & value);
         void setDeferred(entity_t id, component_id_t componentId, void * ptr);
 
-        template <typename T>
+        template<typename T>
         void addSingleton();
         void addSingleton(component_id_t componentId);
 
-        template <typename T>
+        template<typename T>
         bool hasSingleton();
         bool hasSingleton(component_id_t componentId) const;
 
-        template <typename T>
+        template<typename T>
         void removeSingleton();
         void removeSingleton(component_id_t componentId);
 
-        template <typename T>
+        template<typename T>
         void setSingleton(const T & value);
         void setSingleton(component_id_t componentId, const void * ptr);
 
-        template <typename T>
+        template<typename T>
         const T * getSingleton();
-        template <typename T>
+        template<typename T>
         T * getSingletonUpdate();
 
         const void * getSingleton(component_id_t componentId);
         void * getSingletonUpdate(component_id_t componentId);
 
-        template <typename T>
+        template<typename T>
         Stream * getStream();
         Stream * getStream(component_id_t id);
 
         const Component * getComponentDetails(component_id_t id);
 
-        template <typename T>
+        template<typename T>
         component_id_t getComponentId();
 
         component_id_t createDynamicComponent(entity_t entityId);
+        void removeDynamicComponent(entity_t entityId);
 
         QueryBuilder createQuery(const std::set<component_id_t> & with);
 
-        template <class ... TArgs>
+        template<class ... TArgs>
         QueryBuilder createQuery();
 
         SystemBuilder createSystem(const char * name = nullptr);
@@ -288,14 +292,13 @@ namespace ecs
 
         Table * getTableForArchetype(uint16_t t)
         {
-            return tables[t];
+            return tables[t].get();
         }
 
         void executeDeferred();
 
         std::string description(entity_t id);
         Archetype & getEntityArchetypeDetails(entity_t id);
-
 
         [[nodiscard]] float deltaTime() const
         {
@@ -307,20 +310,19 @@ namespace ecs
             systemOrderDirty = true;
         }
 
-
         void setJobInterface(JobInterface * jobi)
         {
             this->jobInterface = jobi;
         }
 
-        template <class T>
+        template<class T>
         entity_t createModule();
 
-        template <class T>
+        template<class T>
         entity_t getModule();
 
         void setModuleObject(entity_t module, void * ptr);
-        template <class T>
+        template<class T>
         T * getModuleObject();
 
         void pushModuleScope(entity_t module);
@@ -332,6 +334,7 @@ namespace ecs
         uint16_t getEntityArchetype(entity_t id) const;
         void moveEntity(entity_t id, uint16_t from, const ArchetypeTransition & trans);
         void addTableToActiveQueries(Table * table, uint16_t aid);
+        void removeTableFromActiveQueries(Table * table);
         void ensureTableForArchetype(uint16_t);
 
         void recalculateSystemOrder();
@@ -356,7 +359,7 @@ namespace ecs
         Component componentBootstrap;
         component_id_t componentBootstrapId;
 
-        robin_hood::unordered_flat_map<uint16_t, Table *> tables;
+        robin_hood::unordered_flat_map<uint16_t, std::unique_ptr<Table>> tables;
         //robin_hood::unordered_map<component_id_t> streams;
 
         float deltaTime_;
@@ -389,52 +392,52 @@ namespace ecs
         ArchetypeManager am;
     };
 
-    template <typename T>
+    template<typename T>
     void World::add(entity_t id)
     {
         auto componentId = getComponentId<T>();
         add(id, componentId);
     }
 
-    template <typename T>
+    template<typename T>
     void World::addDeferred(entity_t id)
     {
         addDeferred(id, getComponentId<T>());
     }
 
-    template <typename T>
+    template<typename T>
     bool World::has(const entity_t id)
     {
         return has(id, getComponentId<T>());
     }
 
-    template <typename T>
+    template<typename T>
     void World::remove(entity_t id)
     {
         remove(id, getComponentId<T>());
     }
 
-    template <typename T>
+    template<typename T>
     void World::removeDeferred(entity_t id)
     {
         removeDeferred(id, getComponentId<T>());
     }
 
-    template <typename T>
+    template<typename T>
     const T * World::get(entity_t id, bool inherit)
     {
         auto ptr = static_cast<const T *>(get(id, getComponentId<T>(), inherit));
         return ptr;
     }
 
-    template <typename T>
+    template<typename T>
     T * World::getUpdate(entity_t id)
     {
         auto ptr = static_cast<T *>(getUpdate(id, getComponentId<T>()));
         return ptr;
     }
 
-    template <typename T, typename U>
+    template<typename T, typename U>
     const U * World::getRelated(entity_t id)
     {
         static_assert(std::is_base_of_v<Relation, T>);
@@ -446,7 +449,7 @@ namespace ecs
         return get<U>(g->entity);
     }
 
-    template <typename T>
+    template<typename T>
     EntityHandle World::getRelatedEntity(entity_t id)
     {
         static_assert(std::is_base_of_v<Relation, T>);
@@ -458,13 +461,13 @@ namespace ecs
         return EntityHandle{g->entity, this};
     }
 
-    template <typename T>
+    template<typename T>
     void World::set(entity_t id, const T & value)
     {
         set(id, getComponentId<T>(), &value);
     }
 
-    template <typename T>
+    template<typename T>
     void World::setDeferred(entity_t id, const T & value)
     {
         auto c = getComponentId<T>();
@@ -476,58 +479,64 @@ namespace ecs
         setDeferred(id, getComponentId<T>(), p);
     }
 
-    template <typename T>
+    template<typename T>
     void World::addSingleton()
     {
         addSingleton(getComponentId<T>());
     }
 
-    template <typename T>
+    template<typename T>
     bool World::hasSingleton()
     {
         return hasSingleton(getComponentId<T>());
     }
 
-    template <typename T>
+    template<typename T>
     void World::removeSingleton()
     {
         removeSingleton(getComponentId<T>());
     }
 
-    template <typename T>
+    template<typename T>
     void World::setSingleton(const T & value)
     {
         setSingleton(getComponentId<T>(), &value);
     }
 
-    template <typename T>
+    template<typename T>
     const T * World::getSingleton()
     {
         return static_cast<const T *>(getSingleton(getComponentId<T>()));
     }
 
-    template <typename T>
+    template<typename T>
     T * World::getSingletonUpdate()
     {
         return static_cast<T *>(getSingletonUpdate(getComponentId<T>()));
     }
 
-    template <typename T>
+    template<typename T>
     Stream * World::getStream()
     {
         return getStream(getComponentId<T>());
     }
 
-    template <typename T>
+    template<typename T>
     component_id_t World::getComponentId()
     {
-        static_assert(std::is_copy_constructible<std::remove_reference_t<T>>(),
-            "Cannot be a component");
+        static_assert(
+            std::is_copy_constructible<std::remove_reference_t<T>>(),
+            "Cannot be a component"
+        );
         //static_assert(std::is_trivially_copyable<T>(), "Cannot be a component");
-        static_assert(std::is_move_constructible<std::remove_reference_t<T>>(),
-            "Cannot be a component");
-        static_assert(std::is_default_constructible<std::remove_reference_t<T>>(),
-            "Cannot be a component");
+        static_assert(
+            std::is_move_constructible<std::remove_reference_t<T>>(),
+            "Cannot be a component"
+        );
+        static_assert(
+            std::is_default_constructible<std::remove_reference_t<T>>(),
+            "Cannot be a component"
+        );
         // static_assert(std::is_standard_layout<T>(), "Cannot be a component");
 
         constexpr bool is_relation = std::is_base_of<Relation, std::remove_reference_t<T>>();
@@ -540,17 +549,19 @@ namespace ecs
         }
 
         component_id_t id = newEntity().id;
-        set<Component>(id, {
-                           World::trimName(typeid(std::remove_reference_t<T>).name()),
-                           sizeof(std::remove_reference_t<T>), alignof(std::remove_reference_t<T>),
-                           componentConstructor<std::remove_reference_t<T>>,
-                           componentDestructor<std::remove_reference_t<T>>,
-                           componentCopy<std::remove_reference_t<T>>,
-                           componentMove<std::remove_reference_t<T>>,
-                           is_relation,
-                           componentAllocator<std::remove_reference_t<T>>,
-                           componentDeallocator<std::remove_reference_t<T>>
-                       });
+        set<Component>(
+            id, {
+                World::trimName(typeid(std::remove_reference_t<T>).name()),
+                sizeof(std::remove_reference_t<T>), alignof(std::remove_reference_t<T>),
+                componentConstructor<std::remove_reference_t<T>>,
+                componentDestructor<std::remove_reference_t<T>>,
+                componentCopy<std::remove_reference_t<T>>,
+                componentMove<std::remove_reference_t<T>>,
+                is_relation,
+                componentAllocator<std::remove_reference_t<T>>,
+                componentDeallocator<std::remove_reference_t<T>>
+            }
+        );
 
         componentMap.emplace(v, id);
         if (id > 2)
@@ -558,14 +569,14 @@ namespace ecs
         return id;
     }
 
-    template <class ... TArgs>
+    template<class ... TArgs>
     QueryBuilder World::createQuery()
     {
         std::set<component_id_t> with = {getComponentId<TArgs>()...};
         return createQuery(with);
     }
 
-    template <class T>
+    template<class T>
     entity_t World::createModule()
     {
         auto name = trimName(typeid(std::remove_reference_t<T>).name());
@@ -574,7 +585,7 @@ namespace ecs
         return modId;
     }
 
-    template <class T>
+    template<class T>
     entity_t World::getModule()
     {
         auto name = trimName(typeid(std::remove_reference_t<T>).name());
@@ -582,7 +593,7 @@ namespace ecs
         return mod.id;
     }
 
-    template <class T>
+    template<class T>
     T * World::getModuleObject()
     {
         entity_t module = getModule<T>();
@@ -620,7 +631,7 @@ namespace ecs
     public:
         explicit ModuleBase(World * world, entity_t moduleId)
             : world_(world)
-            , moduleId(moduleId)
+              , moduleId(moduleId)
         {
             assert(world_->isAlive(moduleId));
             assert(world_->has<ModuleComponent>(moduleId));
@@ -644,15 +655,18 @@ namespace ecs
             onDisabled();
         };
 
-        virtual void onDisabled() {}
-        virtual void onEnabled() {}
+        virtual void onDisabled()
+        {}
+
+        virtual void onEnabled()
+        {}
 
         entity_t getModuleId() const
         {
             return moduleId;
         }
 
-        template <class T>
+        template<class T>
         T * getObject()
         {
             auto p = world_->getModuleObject<T>();

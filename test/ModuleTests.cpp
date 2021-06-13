@@ -62,6 +62,7 @@ TEST_SUITE("Modules")
         auto s = w.createSystem("Test").inGroup("G").execute([&](ecs::World *){
             c++;
         });
+        (void)s;
 
         w.popModuleScope();
 

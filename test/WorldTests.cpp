@@ -586,6 +586,7 @@ TEST_SUITE("World")
 
                 size_t c = 0;
                 for(auto e: *t){
+                    (void)e;
                     c++;
                 }
                 CHECK(c == 1);
@@ -605,5 +606,46 @@ TEST_SUITE("World")
 
         CHECK(table->description() == "TestComponent2|TestComponent3");
         CHECK(table0->description() == "Empty");
+    }
+
+    TEST_CASE("Dynamic Components")
+    {
+        ecs::World w;
+
+        struct C1 {};
+        struct C2 {};
+
+        auto dc = w.newEntity("Fred").add<C1>();
+
+        auto e = w.newEntity().add<C2>();
+
+        auto c = w.createDynamicComponent(dc);
+
+        e.addDynamic(c);
+
+        auto q = w.createQuery({ c });
+        auto res = w.getResults(q.id);
+        CHECK(res.count() == 1);
+        res.each<>([&](ecs::EntityHandle eq)
+            {
+                CHECK(eq == e);
+            });
+
+        auto ad = w.getEntityArchetypeDetails(e);
+        auto tab = w.getTableForArchetype(ad.id);
+        (void)tab;
+        e.removeDynamic(c);
+        CHECK(!e.hasDynamic(c));
+        w.removeDynamicComponent(c);
+
+        CHECK(!w.has<ecs::Component>(dc));
+
+        dc.remove<C1>();
+        dc.add<C2>();
+
+        CHECK(dc.has<C2>());
+        CHECK(!dc.has<C1>());
+        CHECK(!e.has<C1>());
+        CHECK(e.has<C2>());
     }
 }
