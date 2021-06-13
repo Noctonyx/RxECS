@@ -103,9 +103,10 @@ namespace ecs
     EntityHandle World::newEntity(const char * name)
     {
         while (recycleStart < entities.size()) {
-            if (entities[recycleStart].alive == false) {
+            if (!entities[recycleStart].alive) {
                 entities[recycleStart].alive = true;
                 entities[recycleStart].archetype = am.emptyArchetype;
+                entities[recycleStart].updateSequence = 0;
                 auto id = makeId(
                     static_cast<uint32_t>(recycleStart),
                     entities[recycleStart].version
@@ -127,6 +128,7 @@ namespace ecs
         x.alive = true;
         x.version = 0;
         x.archetype = am.emptyArchetype;
+        x.updateSequence = 0;
         auto id = makeId(i, v);
         tables[am.emptyArchetype]->addEntity(id);
 
@@ -237,11 +239,14 @@ namespace ecs
 
     void World::add(const entity_t id, const component_id_t componentId)
     {
+        if(has(id, componentId)) {
+            return;
+        }
         const auto at = getEntityArchetype(id);
         auto trans = am.startTransition(at);
 
         am.addComponentToArchetype(componentId, trans);
-
+        setEntityUpdateSequence(id);
         moveEntity(id, at, trans);
     }
 
@@ -273,6 +278,7 @@ namespace ecs
         auto trans = am.startTransition(at);
         am.removeComponentFromArchetype(componentId, trans);
         moveEntity(id, at, trans);
+        setEntityUpdateSequence(id);
     }
 
     void World::removeDeferred(entity_t id, component_id_t componentId)
@@ -318,6 +324,7 @@ namespace ecs
         auto table = tables[at];
 
         void * ptr = table->getUpdateComponent(id, componentId);
+        setEntityUpdateSequence(id);
         return ptr;
     }
 
@@ -338,6 +345,7 @@ namespace ecs
         auto table = tables[at];
 
         table->setComponent(id, componentId, ptr);
+        setEntityUpdateSequence(id);
     }
 
     void World::setDeferred(entity_t id, component_id_t componentId, void * ptr)
@@ -741,6 +749,8 @@ namespace ecs
 
     void World::executeSystemGroup(entity_t systemGroup)
     {
+        updateSequence++;
+
         auto group_details = getUpdate<SystemGroup>(systemGroup);
         if (group_details->onBegin) {
             group_details->onBegin();
@@ -766,6 +776,10 @@ namespace ecs
             executeGroupsSystems(systemGroup);
         } while (group_details->fixed && group_details->delta >= group_details->rate);
 
+        for(auto & sid: group_details->executionSequence) {
+            auto sp = getUpdate<System>(sid);
+            sp->lastRunSequence = updateSequence;
+        }
         deltaTime_ = savedDelta;
         if (group_details->onEnd) {
             group_details->onEnd();
@@ -1029,5 +1043,13 @@ namespace ecs
         }
 
         systemOrderDirty = false;
+    }
+
+    void World::setEntityUpdateSequence(entity_t id)
+    {
+        assert(isAlive(id));
+        const auto v = version(id);
+        const auto i = index(id);
+        entities[i].updateSequence = updateSequence;
     }
 }

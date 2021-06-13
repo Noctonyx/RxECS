@@ -76,6 +76,7 @@ namespace ecs
     {
         uint32_t version;
         uint32_t row;
+        uint64_t updateSequence;
         uint16_t archetype;
         bool alive;
     };
@@ -120,7 +121,7 @@ namespace ecs
             return it != other.it;
         }
 
-        component_id_t operator*()
+        component_id_t operator*() const
         {
             return *it;
         }
@@ -338,6 +339,8 @@ namespace ecs
 
         static std::string trimName(const char * n);
 
+        void setEntityUpdateSequence(entity_t id);
+
     public:
         [[nodiscard]] std::vector<entity_t> getPipelineGroupSequence() const
         {
@@ -379,6 +382,8 @@ namespace ecs
         JobInterface * jobInterface = nullptr;
 
         std::stack<entity_t> moduleScope;
+
+        uint64_t updateSequence = 1;
 
     public:
         ArchetypeManager am;

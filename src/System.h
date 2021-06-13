@@ -129,7 +129,7 @@ namespace ecs
         size_t count = 0;
         float executionTime;
         std::chrono::time_point<std::chrono::steady_clock> startTime;
-        //bool dirtyOrder = true;
-    };
 
+        uint64_t lastRunSequence = 0;
+    };
 }
