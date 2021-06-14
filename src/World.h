@@ -70,6 +70,7 @@ namespace ecs
 
     struct Stream;
     struct Query;
+    struct Filter;
 
     struct EntityEntry
     {
@@ -329,6 +330,11 @@ namespace ecs
         void popModuleScope();
 
         void setModuleEnabled(entity_t module, bool enabled);
+
+        template<class ... Comp>
+        std::vector<component_id_t> makeComponentList();
+
+        Filter createFilter(std::vector<component_id_t> with = {}, std::vector<component_id_t> without = {});
 
     protected:
         uint16_t getEntityArchetype(entity_t id) const;
@@ -674,4 +680,10 @@ namespace ecs
             return p;
         }
     };
+
+    template<class... Comp>
+    std::vector<component_id_t> World::makeComponentList()
+    {
+        return std::vector<component_id_t>{getComponentId<Comp>()...};
+    }
 }

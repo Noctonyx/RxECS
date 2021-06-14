@@ -49,7 +49,8 @@ namespace ecs
     template <class ... TArgs>
     QueryBuilder & QueryBuilder::with()
     {
-        std::vector<component_id_t> with = {world->getComponentId<TArgs>()...};
+        //std::vector<component_id_t> with = {world->getComponentId<TArgs>()...};
+        auto with = world->makeComponentList<TArgs...>();
         auto qp = world->getUpdate<Query>(id);
         for (auto w: with) {
             qp->with.insert(w);

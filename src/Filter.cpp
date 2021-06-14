@@ -23,45 +23,30 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "EntityHandle.h"
-#include "World.h"
+//
+// Created by shane on 14/06/2021.
+//
+
 #include "Filter.h"
 
 namespace ecs
 {
-    EntityHandle::operator bool() const
+    void Filter::each(std::function<void(entity_t)> && f) const
     {
-        return world->isAlive(id);
+        for (auto tv: tableViews) {
+            for (auto r: tv) {
+                f(r);
+            }
+        }
     }
 
-    EntityHandle::operator unsigned long long() const
+    size_t Filter::count()
     {
-        return id;
-    }
+        size_t result = 0;
+        for (auto tv: tableViews) {
+            result += tv.count;
+        }
 
-    std::string EntityHandle::description() const
-    {
-        return world->description(id);
-    }
-
-    ComponentIterator EntityHandle::begin()
-    {
-        auto & a = world->getEntityArchetypeDetails(id);
-        return ComponentIterator{ world ,a.id, a.components.begin() };
-    }
-
-    ComponentIterator EntityHandle::end()
-    {
-        auto & a = world->getEntityArchetypeDetails(id);
-        return ComponentIterator{ world ,a.id, a.components.end() };
-    }
-
-    Filter EntityHandle::getChildren(const std::vector<component_id_t> & with, const std::vector<component_id_t> & without)
-    {
-        assert(has<ecs::Component>());
-
-        auto w = with;
-        w.push_back(id);
-        return world->createFilter(w, without);
+        return result;
     }
 }

@@ -28,63 +28,6 @@
 
 namespace ecs
 {
-    TableViewRowIterator & TableViewRowIterator::operator++()
-    {
-        view->checkValidity();
-        row++;
-        return *this;
-    }
-
-    uint32_t TableViewRowIterator::operator*() const
-    {
-        return static_cast<uint32_t>(row);
-    }
-
-    void TableView::checkIndex(uint32_t rowIndex) const
-    {
-        if (rowIndex >= startRow + count || rowIndex < startRow) {
-            throw std::range_error("row out of range");
-        }
-    }
-
-    entity_t TableView::entity(uint32_t rowIndex) const
-    {
-        checkIndex(rowIndex);
-        return table->entities[rowIndex];
-    }
-
-    const void * TableView::get(component_id_t comp, const uint32_t row) const
-    {
-        return getUpdate(comp, row);
-    }
-
-    void TableView::checkValidity() const
-    {
-        if (tableUpdateTimestamp != table->lastUpdateTimestamp) {
-            throw std::runtime_error("Invalidated query results");
-        }
-    }
-
-    bool TableView::passesFilters(const std::unordered_set<component_id_t> & filters) const
-    {
-        for (auto f: filters) {
-            if (!table->hasComponent(f)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    void * TableView::getUpdate(component_id_t comp, const uint32_t row) const
-    {
-        auto c = table->columns.find(comp);
-        if (c == table->columns.end()) {
-            return nullptr;
-        }
-
-        return (*c).second->getEntry(row);
-    }
-
     const TableView & TableViewIterator::operator*() const
     {
         return result->tableViews.at(row);
@@ -97,8 +40,7 @@ namespace ecs
         const std::set<std::pair<component_id_t, std::set<component_id_t>>> & withRelations,
         const std::set<component_id_t> & withSingletons,
         bool inherit,
-        bool thread,
-        const std::set<component_id_t> & filter
+        bool thread
     )
         : world(world)
         , inheritance(inherit)
@@ -124,10 +66,6 @@ namespace ecs
         }
         for (auto w: with) {
             components.insert(w);
-        }
-
-        for (auto w: filter) {
-            withFilter.insert(w);
         }
 
         for (auto & [c, v]: withRelations) {

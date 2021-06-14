@@ -36,6 +36,7 @@
 #include "Stream.h"
 #include "EntityHandle.h"
 #include "EntityImpl.h"
+#include "Filter.h"
 
 namespace ecs
 {
@@ -206,7 +207,7 @@ namespace ecs
             return;
         }
 
-        if(has<Component>(id)) {
+        if (has<Component>(id)) {
             removeDynamicComponent(id);
         }
 
@@ -464,25 +465,25 @@ namespace ecs
 
     void World::removeDynamicComponent(entity_t entityId)
     {
-        if(!has<Component>(entityId)) {
+        if (!has<Component>(entityId)) {
             return;
         }
 
-        auto q = createQuery({ entityId });
+        auto q = createQuery({entityId});
         auto res = getResults(q.id);
         assert(res.count() == 0);
         deleteQuery(q.id);
 
         std::vector<uint16_t> removeList;
 
-        for(auto & [k, t]: tables) {
+        for (auto &[k, t]: tables) {
 
-            if(t == nullptr || t->hasComponent(entityId)) {
+            if (t == nullptr || t->hasComponent(entityId)) {
                 removeList.push_back(k);
             }
         }
 
-        for(auto & r: removeList) {
+        for (auto & r: removeList) {
             auto at = am.archetypes[r];
             am.archetypeMap.erase(at.hash_value);
             //auto tab = tables[r];
@@ -562,7 +563,7 @@ namespace ecs
 
         return QueryResult(
             this, aq->tables, aq->with, aq->relations, aq->singleton,
-            aq->inheritance, aq->thread, aq->filterComponents
+            aq->inheritance, aq->thread
         );
     }
 
@@ -571,9 +572,9 @@ namespace ecs
         if (isAlive(sys)) {
             if (auto system = getUpdate<System>(sys); system) {
 
-                if(system->interval > 0.01f) {
+                if (system->interval > 0.01f) {
                     system->intervalElapsed += deltaTime_;
-                    if(system->intervalElapsed < system->interval) {
+                    if (system->intervalElapsed < system->interval) {
                         system->count = 0;
                         system->executionTime = 0.f;
                         return std::nullopt;
@@ -972,19 +973,19 @@ namespace ecs
         }
     }
 
-    void World::removeTableFromActiveQueries(Table* table)
+    void World::removeTableFromActiveQueries(Table * table)
     {
         if (queryQuery) {
             getResults(queryQuery)
                 .each<Query>(
-                    [&table](EntityHandle, Query* aq) {
+                    [&table](EntityHandle, Query * aq) {
                         assert(aq);
                         auto it = std::find(aq->tables.begin(), aq->tables.end(), table);
-                        if(it != aq->tables.end()) {
+                        if (it != aq->tables.end()) {
                             aq->tables.erase(it);
                         }
                     }
-            );
+                );
         }
     }
 
@@ -995,7 +996,7 @@ namespace ecs
         }
 
         auto t = std::make_unique<Table>(this, aid);
-        Table* ptr = t.get();
+        Table * ptr = t.get();
         tables[aid] = std::move(t);
 
         addTableToActiveQueries(ptr, aid);
@@ -1118,5 +1119,32 @@ namespace ecs
         //const auto v = version(id);
         const auto i = index(id);
         entities[i].updateSequence = updateSequence;
+    }
+
+    Filter World::createFilter(std::vector<component_id_t> with, std::vector<component_id_t> without)
+    {
+        Filter filter{};
+
+        for (auto & at: *this) {
+            std::vector<component_id_t> with_overlap;
+            std::vector<component_id_t> without_overlap;
+
+            std::ranges::set_intersection(at.components, with, std::back_inserter(with_overlap));
+
+            if (with_overlap.size() < with.size()) {
+                continue;
+            }
+
+            std::ranges::set_intersection(at.components, without, std::back_inserter(without_overlap));
+            if (!without_overlap.empty()) {
+                continue;
+            }
+
+            Table * tab = tables[at.id].get();
+
+            filter.tableViews.push_back({this, tab, tab->lastUpdateTimestamp, 0, tab->entities.size()});
+        }
+
+        return filter;
     }
 }

@@ -26,7 +26,11 @@ add_library(RxECS STATIC
     src/Stream.h
     src/Stream.cpp
     src/EntityHandle.h
-     "src/EntityHandle.cpp" "src/TableIterator.h" "src/ComponentIterator.h")
+    src/EntityHandle.cpp
+    src/TableIterator.h
+    src/ComponentIterator.h
+    src/TableView.h
+    src/TableView.cpp src/Filter.cpp src/Filter.h)
 
  add_executable(RxECS_tests 
     test/TestMain.cpp

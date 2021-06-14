@@ -23,45 +23,27 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "EntityHandle.h"
-#include "World.h"
-#include "Filter.h"
+//
+// Created by shane on 14/06/2021.
+//
+
+#ifndef RXECS_FILTER_H
+#define RXECS_FILTER_H
+
+#include <vector>
+#include <functional>
+#include "Entity.h"
+#include "TableView.h"
 
 namespace ecs
 {
-    EntityHandle::operator bool() const
+    struct Filter
     {
-        return world->isAlive(id);
-    }
+        std::vector<TableView> tableViews;
 
-    EntityHandle::operator unsigned long long() const
-    {
-        return id;
-    }
-
-    std::string EntityHandle::description() const
-    {
-        return world->description(id);
-    }
-
-    ComponentIterator EntityHandle::begin()
-    {
-        auto & a = world->getEntityArchetypeDetails(id);
-        return ComponentIterator{ world ,a.id, a.components.begin() };
-    }
-
-    ComponentIterator EntityHandle::end()
-    {
-        auto & a = world->getEntityArchetypeDetails(id);
-        return ComponentIterator{ world ,a.id, a.components.end() };
-    }
-
-    Filter EntityHandle::getChildren(const std::vector<component_id_t> & with, const std::vector<component_id_t> & without)
-    {
-        assert(has<ecs::Component>());
-
-        auto w = with;
-        w.push_back(id);
-        return world->createFilter(w, without);
-    }
+        void toVector(std::vector<entity_t> & vec) const;
+        void each(std::function<void(entity_t)> && f) const;
+        size_t count();
+    };
 }
+#endif //RXECS_FILTER_H
