@@ -67,7 +67,7 @@ namespace ecs
             throw std::runtime_error("Invalidated query results");
         }
     }
-
+#if 0
     bool TableView::passesFilters(const std::unordered_set <component_id_t> & filters) const
     {
         for (auto f: filters) {
@@ -77,7 +77,7 @@ namespace ecs
         }
         return true;
     }
-
+#endif
     void * TableView::getUpdate(component_id_t comp, const uint32_t row) const
     {
         auto c = table->columns.find(comp);
@@ -86,12 +86,5 @@ namespace ecs
         }
 
         return (*c).second->getEntry(row);
-    }
-
-    template<typename T>
-    std::span<const T> TableView::getColumn() const
-    {
-        auto cid = world->getComponentId<T>();
-        return table->columns[cid]->getComponentData();
     }
 }

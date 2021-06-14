@@ -26,6 +26,7 @@
 #include "EntityHandle.h"
 #include "World.h"
 #include "Filter.h"
+#include "EntityImpl.h"
 
 namespace ecs
 {
@@ -63,5 +64,63 @@ namespace ecs
         auto w = with;
         w.push_back(id);
         return world->createFilter(w, without);
+    }
+
+    EntityHandle & EntityHandle::addParent(component_id_t componentId)
+    {
+        world->add(id, componentId);
+        return *this;
+    }
+
+    EntityHandle & EntityHandle::destroyDeferred()
+    {
+        world->destroyDeferred(id);
+        return *this;
+    }
+
+    bool EntityHandle::hasParent(component_id_t parentId) const
+    {
+        return world->has(id, parentId);
+    }
+
+    EntityHandle & EntityHandle::removeParent(component_id_t parentId)
+    {
+        world->remove(id, parentId);
+        return *this;
+    }
+
+    bool EntityHandle::isAlive() const
+    {
+        return world->isAlive(id);
+    }
+
+    EntityHandle & EntityHandle::destroy()
+    {
+        world->destroy(id);
+        return *this;
+    }
+
+    EntityHandle EntityHandle::instantiate(const char * name)
+    {
+        assert(isAlive());
+        assert(has<Prefab>());
+
+        auto e = world->instantiate(id);
+        if (name) {
+            e.set<Name>({name});
+        }
+        return e;
+    }
+
+    EntityHandle & EntityHandle::setAsParent()
+    {
+        world->setAsParent(id);
+        return *this;
+    }
+
+    EntityHandle & EntityHandle::removeAsParent()
+    {
+        world->removeAsParent(id);
+        return *this;
     }
 }

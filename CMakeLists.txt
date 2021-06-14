@@ -30,7 +30,11 @@ add_library(RxECS STATIC
     src/TableIterator.h
     src/ComponentIterator.h
     src/TableView.h
-    src/TableView.cpp src/Filter.cpp src/Filter.h)
+    src/TableView.cpp
+    src/Filter.cpp
+    src/Filter.h
+    src/TableViewImpl.h
+)
 
  add_executable(RxECS_tests 
     test/TestMain.cpp

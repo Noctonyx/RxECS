@@ -1123,7 +1123,7 @@ namespace ecs
 
     Filter World::createFilter(std::vector<component_id_t> with, std::vector<component_id_t> without)
     {
-        Filter filter{};
+        std::vector<TableView> tvs;
 
         for (auto & at: *this) {
             std::vector<component_id_t> with_overlap;
@@ -1142,9 +1142,19 @@ namespace ecs
 
             Table * tab = tables[at.id].get();
 
-            filter.tableViews.push_back({this, tab, tab->lastUpdateTimestamp, 0, tab->entities.size()});
+            tvs.push_back({this, tab, tab->lastUpdateTimestamp, 0, tab->entities.size()});
         }
 
-        return filter;
+        return Filter(this, tvs);
+    }
+
+    void World::setAsParent(entity_t id)
+    {
+        createDynamicComponent(id);
+    }
+
+    void World::removeAsParent(entity_t id)
+    {
+        removeDynamicComponent(id);
     }
 }

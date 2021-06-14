@@ -50,10 +50,10 @@ namespace ecs
 
         template<class ... TArgs>
         SystemBuilder& without();
-
+#if 0
         template<class ... TArgs>
         SystemBuilder& with();
-
+#endif
         template <class T, class ... U>
         SystemBuilder& withRelation();
 

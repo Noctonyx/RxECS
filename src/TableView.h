@@ -72,7 +72,7 @@ namespace ecs
         [[nodiscard]] const void * get(component_id_t comp, uint32_t row) const;
         void checkValidity() const;
 
-        bool passesFilters(const std::unordered_set <component_id_t> & filters) const;
+        //bool passesFilters(const std::unordered_set <component_id_t> & filters) const;
 
         [[nodiscard]] void * getUpdate(component_id_t comp, uint32_t row) const;
 

@@ -264,9 +264,6 @@ namespace ecs
         template<typename T>
         component_id_t getComponentId();
 
-        component_id_t createDynamicComponent(entity_t entityId);
-        void removeDynamicComponent(entity_t entityId);
-
         QueryBuilder createQuery(const std::set<component_id_t> & with);
 
         template<class ... TArgs>
@@ -334,6 +331,9 @@ namespace ecs
         template<class ... Comp>
         std::vector<component_id_t> makeComponentList();
 
+        void setAsParent(entity_t id);
+        void removeAsParent(entity_t id);
+
         Filter createFilter(std::vector<component_id_t> with = {}, std::vector<component_id_t> without = {});
 
     protected:
@@ -349,6 +349,9 @@ namespace ecs
         static std::string trimName(const char * n);
 
         void setEntityUpdateSequence(entity_t id);
+
+        component_id_t createDynamicComponent(entity_t entityId);
+        void removeDynamicComponent(entity_t entityId);
 
     public:
         [[nodiscard]] std::vector<entity_t> getPipelineGroupSequence() const

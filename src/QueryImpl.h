@@ -45,7 +45,7 @@ namespace ecs
 
         return *this;
     }
-
+#if 0
     template <class ... TArgs>
     QueryBuilder & QueryBuilder::with()
     {
@@ -59,7 +59,7 @@ namespace ecs
 
         return *this;
     }
-
+#endif
     template <class T, class ... U>
     QueryBuilder & QueryBuilder::withRelation()
     {
@@ -87,10 +87,11 @@ namespace ecs
         return *this;
     }
 
-    inline QueryBuilder & QueryBuilder::withDynamic(component_id_t componentId)
+    inline QueryBuilder & QueryBuilder::withParent(component_id_t parentId)
     {
+        assert(world->has<Component>(parentId));
         auto qp = world->getUpdate<Query>(id);
-        qp->with.insert(componentId);
+        qp->with.insert(parentId);
         qp->recalculateQuery(world);
 
         return *this;

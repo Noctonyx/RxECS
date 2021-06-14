@@ -72,7 +72,7 @@ namespace ecs
 
         return *this;
     }
-
+#if 0
     template<class ... TArgs>
     SystemBuilder & SystemBuilder::with()
     {
@@ -88,7 +88,7 @@ namespace ecs
 
         return *this;
     }
-
+#endif
     template<class T, class ... U>
     SystemBuilder & SystemBuilder::withRelation()
     {

@@ -23,14 +23,21 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#pragma once
+//
+// Created by shane on 14/06/2021.
+//
 
-#include "Entity.h"
-#include "World.h"
-#include "System.h"
-#include "EntityHandle.h"
-#include "QueryImpl.h"
-#include "SystemImpl.h"
-#include "EntityImpl.h"
-#include "Filter.h"
-#include "TableViewImpl.h"
+#include "TableView.h"
+
+namespace ecs
+{
+    template<typename T>
+    std::span<const T> TableView::getColumn() const
+    {
+        auto cid = world->getComponentId<T>();
+        if (!table->hasComponent(cid)) {
+            return {};
+        }
+        return table->columns[cid]->getComponentData<T>();
+    }
+}

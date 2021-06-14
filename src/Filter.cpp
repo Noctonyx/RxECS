@@ -29,18 +29,20 @@
 
 #include "Filter.h"
 
+#include <utility>
+
 namespace ecs
 {
-    void Filter::each(std::function<void(entity_t)> && f) const
+    void Filter::each(std::function<void(EntityHandle)> && f) const
     {
         for (auto tv: tableViews) {
             for (auto r: tv) {
-                f(r);
+                f(EntityHandle{tv.entity(r), world});
             }
         }
     }
 
-    size_t Filter::count()
+    size_t Filter::count() const
     {
         size_t result = 0;
         for (auto tv: tableViews) {
@@ -49,4 +51,19 @@ namespace ecs
 
         return result;
     }
+
+    void Filter::toVector(std::vector<entity_t> & vec) const
+    {
+        vec.clear();
+        for (auto tv: tableViews) {
+            for (auto row: tv) {
+                vec.push_back(tv.entity(row));
+            }
+        }
+    }
+
+    Filter::Filter(World * world, std::vector<TableView>  tableViews)
+        : world(world)
+          , tableViews(std::move(tableViews))
+    {}
 }

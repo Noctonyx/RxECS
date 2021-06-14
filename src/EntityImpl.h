@@ -1,3 +1,28 @@
+////////////////////////////////////////////////////////////////////////////////
+// MIT License
+//
+// Copyright (c) 2021.  Shane Hyde (shane@noctonyx.com)
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 
 #include "EntityHandle.h"
@@ -82,51 +107,5 @@ namespace ecs
     {
         world->remove<T>(id);
         return *this;
-    }
-
-    inline EntityHandle & EntityHandle::addDynamic(component_id_t componentId)
-    {
-        world->add(id, componentId);
-        return *this;
-    }
-
-    inline EntityHandle & EntityHandle::destroyDeferred()
-    {
-        world->destroyDeferred(id);
-        return *this;
-    }
-
-    inline bool EntityHandle::hasDynamic(component_id_t componentId)
-    {
-        return world->has(id, componentId);
-    }
-
-    inline EntityHandle & EntityHandle::removeDynamic(component_id_t componentId)
-    {
-        world->remove(id, componentId);
-        return *this;
-    }
-
-    inline bool EntityHandle::isAlive() const
-    {
-        return world->isAlive(id);
-    }
-
-    inline EntityHandle & EntityHandle::destroy()
-    {
-        world->destroy(id);
-        return *this;
-    }
-
-    inline EntityHandle EntityHandle::instantiate(const char * name)
-    {
-        assert(isAlive());
-        assert(has<Prefab>());
-
-        auto e = world->instantiate(id);
-        if (name) {
-            e.set<Name>({name});
-        }
-        return e;
     }
 }

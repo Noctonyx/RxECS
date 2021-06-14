@@ -437,26 +437,27 @@ TEST_SUITE("World")
     {
         ecs::World w;
 
-        const auto dce = w.newEntity("TestName");
-        const auto dc = w.createDynamicComponent(dce);
+        auto dce = w.newEntity("TestName");
+        dce.setAsParent();
+        //const auto dc = w.createDynamicComponent(dce);
 
         SUBCASE("World Interface") {
             const auto e = w.newEntity();
-            w.add(e, dc);
+            w.add(e, dce);
 
-            assert(w.has(e, dc));
+            assert(w.has(e, dce));
 
-            w.remove(e, dc);
-            assert(!w.has(e, dc));
+            w.remove(e, dce);
+            assert(!w.has(e, dce));
         }
 
         SUBCASE("EntityHandle Interface")
         {
             auto e = w.newEntity();
-            e.addDynamic(dc);
-            assert(e.hasDynamic(dc));
-            e.removeDynamic(dc);
-            assert(!e.hasDynamic(dc));
+            e.addParent(dce);
+            assert(e.hasParent(dce));
+            e.removeParent(dce);
+            assert(!e.hasParent(dce));
         }
     }
 
@@ -618,12 +619,13 @@ TEST_SUITE("World")
         auto dc = w.newEntity("Fred").add<C1>();
 
         auto e = w.newEntity().add<C2>();
+        dc.setAsParent();
 
-        auto c = w.createDynamicComponent(dc);
+        //auto c = w.createDynamicComponent(dc);
 
-        e.addDynamic(c);
+        e.addParent(dc);
 
-        auto q = w.createQuery({ c });
+        auto q = w.createQuery({ dc.id });
         auto res = w.getResults(q.id);
         CHECK(res.count() == 1);
         res.each<>([&](ecs::EntityHandle eq)
@@ -634,9 +636,10 @@ TEST_SUITE("World")
         auto ad = w.getEntityArchetypeDetails(e);
         auto tab = w.getTableForArchetype(ad.id);
         (void)tab;
-        e.removeDynamic(c);
-        CHECK(!e.hasDynamic(c));
-        w.removeDynamicComponent(c);
+        e.removeParent(dc);
+        CHECK(!e.hasParent(dc));
+        dc.removeAsParent();
+        //w.removeDynamicComponent(dc);
 
         CHECK(!w.has<ecs::Component>(dc));
 
@@ -647,5 +650,83 @@ TEST_SUITE("World")
         CHECK(!dc.has<C1>());
         CHECK(!e.has<C1>());
         CHECK(e.has<C2>());
+    }
+
+    TEST_CASE("Filters") {
+        ecs::World w;
+
+        struct C1 {};
+        struct C2 {};
+        struct C3 {};
+
+        auto e1 = w.newEntity().add<C1>();
+        auto e2 = w.newEntity().add<C2>();
+        auto e3 = w.newEntity().add<C1>().add<C2>();
+
+        SUBCASE("Empty") {
+            auto f = w.createFilter();
+            CHECK(f.count() > 3);
+        }
+
+        SUBCASE("With Single") {
+            auto f = w.createFilter(w.makeComponentList<C1>());
+            CHECK(f.count() == 2);
+            for(auto tv: f) {
+                auto c1 = tv.getColumn<C1>();
+                auto c2 = tv.getColumn<C2>();
+                for(auto row: tv) {
+                    auto c3 = tv.rowComponent<C2>(row);
+                    (void)c3;
+                }
+            }
+        }
+
+        SUBCASE("With multiple") {
+            auto f2 = w.createFilter(w.makeComponentList<C1, C2>());
+            CHECK(f2.count() == 1);
+            std::vector<ecs::entity_t > ev;
+            f2.toVector(ev);
+            CHECK(ev.size() == 1);
+            CHECK(ev[0] == e3.id);
+        }
+
+        SUBCASE("Using each")
+        {
+            auto f = w.createFilter(w.makeComponentList<C1>());
+            f.each([](ecs::EntityHandle e){
+                CHECK(e.isAlive());
+            })  ;
+        }
+
+        SUBCASE("With without")
+        {
+            auto f = w.createFilter(w.makeComponentList<C1>(), w.makeComponentList<C2>());
+            CHECK(f.count() == 1);
+            std::vector<ecs::entity_t > ev;
+            f.toVector(ev);
+            CHECK(ev.size() == 1);
+            CHECK(ev[0] == e1.id);
+        }
+    }
+
+    TEST_CASE("Children")
+    {
+        ecs::World w;
+
+        struct C1 {};
+        struct C2 {};
+
+        auto e1 = w.newEntity().add<C1>().setAsParent();
+        auto e2 = w.newEntity().add<C2>();
+
+        e2.addParent(e1);
+
+        auto f = e1.getChildren();
+        CHECK(f.count() == 1);
+
+        e2.destroy();
+        f = e1.getChildren();
+        CHECK(f.count() == 0);
+        e1.destroy();
     }
 }

@@ -39,11 +39,47 @@ namespace ecs
 {
     struct Filter
     {
-        std::vector<TableView> tableViews;
+        struct TableViewIterator
+        {
+            uint32_t row;
+            const Filter * result;
+
+            bool operator!=(const TableViewIterator & rhs) const
+            {
+                return row != rhs.row;
+            }
+
+            void operator++()
+            {
+                row++;
+            }
+
+            const TableView & operator*() const
+            {
+                return result->tableViews.at(row);
+            };
+        };
+
+    private:
+        World * world;
+        std::vector<TableView> tableViews{};
+
+    public:
+        explicit Filter(World * world, std::vector<TableView>  tableViews = {});
 
         void toVector(std::vector<entity_t> & vec) const;
-        void each(std::function<void(entity_t)> && f) const;
-        size_t count();
+        void each(std::function<void(EntityHandle)> && f) const;
+        [[nodiscard]] size_t count() const;
+
+        [[nodiscard]] TableViewIterator begin() const
+        {
+            return TableViewIterator{0, this};
+        }
+
+        [[nodiscard]] TableViewIterator end() const
+        {
+            return TableViewIterator{static_cast<uint32_t>(tableViews.size()), this};
+        }
     };
 }
 #endif //RXECS_FILTER_H
