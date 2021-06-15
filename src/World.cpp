@@ -588,8 +588,12 @@ namespace ecs
                     auto res = getResults(system->query);
                     system->count = res.count();
                     if (system->queryProcessor && system->count > 0) {
-                        system->queryProcessor(res);
-                    } else if (system->executeIfNoneProcessor && system->count == 0) {
+                        if(system->updatesOnly) {
+                            res.onlyUpdatedAfter(system->lastRunSequence);
+                        }
+                        system->count = system->queryProcessor(res);
+                    }
+                    if (system->executeIfNoneProcessor && system->count == 0) {
                         if (system->thread) {
                             return jobInterface->create(
                                 [=, this]() {
@@ -597,6 +601,7 @@ namespace ecs
                                     const auto end = std::chrono::high_resolution_clock::now();
                                     system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
                                         float>(end - system->startTime).count();
+                                    return 0;
                                 }
                             );
                         } else {
@@ -616,6 +621,7 @@ namespace ecs
                                 const auto end = std::chrono::high_resolution_clock::now();
                                 system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
                                     float>(end - system->startTime).count();
+                                return 0;
                             }
                         );
                     } else {

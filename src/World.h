@@ -149,10 +149,11 @@ namespace ecs
     {
         using JobHandle = std::shared_ptr<void>;
 
-        virtual JobHandle create(std::function<void()>) = 0;
+        virtual JobHandle create(std::function<uint32_t()>) = 0;
         virtual void schedule(JobHandle) = 0;
         virtual bool isComplete(JobHandle) const = 0;
         virtual void awaitCompletion(JobHandle) = 0;
+        virtual uint32_t getJobResult(JobHandle) = 0;
     };
 
     struct ModuleComponent

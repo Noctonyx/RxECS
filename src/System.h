@@ -104,7 +104,7 @@ namespace ecs
     {
         queryid_t query = 0;
         World* world;
-        std::function<void(QueryResult&)> queryProcessor;
+        std::function<uint32_t(QueryResult&)> queryProcessor;
         std::function<void(World *)> executeProcessor;
         std::function<void(World *)> executeIfNoneProcessor;
         std::function<void(Stream *)> streamProcessor;
@@ -136,5 +136,6 @@ namespace ecs
 
         float interval = 0.f;
         float intervalElapsed = 0.f;
+        bool updatesOnly = false;
     };
 }

@@ -128,4 +128,14 @@ namespace ecs
         }
         return *this;
     }
+
+    SystemBuilder & SystemBuilder::withUpdates()
+    {
+        world->markSystemsDirty();
+
+        auto sp = world->getUpdate<System>(id);
+        sp->updatesOnly = true;
+
+        return *this;
+    }
 }

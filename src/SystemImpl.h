@@ -242,8 +242,9 @@ namespace ecs
             i++;
         }
 
-        s->queryProcessor = [=](QueryResult & res) {
+        s->queryProcessor = [=](QueryResult& res) {
             res.each<U...>(f);
+            return res.getProcessed();
         };
 
         return *this;

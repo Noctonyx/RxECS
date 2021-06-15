@@ -663,6 +663,8 @@ TEST_SUITE("World")
         auto e2 = w.newEntity().add<C2>();
         auto e3 = w.newEntity().add<C1>().add<C2>();
 
+        (void)e2;
+
         SUBCASE("Empty") {
             auto f = w.createFilter();
             CHECK(f.count() > 3);
@@ -678,6 +680,8 @@ TEST_SUITE("World")
                     auto c3 = tv.rowComponent<C2>(row);
                     (void)c3;
                 }
+                (void)c1;
+                (void)c2;
             }
         }
 

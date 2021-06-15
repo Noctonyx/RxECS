@@ -25,6 +25,7 @@
 
 #pragma once
 #include <vector>
+#include <map>
 
 #include "ArchetypeManager.h"
 #include "Entity.h"
@@ -51,7 +52,7 @@ namespace ecs
 
         Timestamp lastUpdateTimestamp;
 
-        robin_hood::unordered_map<component_id_t, std::unique_ptr<Column>> columns;
+        std::map<component_id_t, std::unique_ptr<Column>> columns;
 
         Table(World * world, uint16_t archetypeId);
 

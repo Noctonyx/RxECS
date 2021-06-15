@@ -69,14 +69,6 @@ namespace ecs
         void clear();
 
         template<class T>
-        std::span<const T> getComponentData() const;
+        std::span<const T> getComponentData();
     };
-
-    template<class T>
-    std::span<const T> Column::getComponentData() const
-    {
-        assert(world.getComponentId<T>() == componentId);
-        const T * x = reinterpret_cast<const T *>(ptr);
-        return std::span<const T>(x, count);
-    }
 }

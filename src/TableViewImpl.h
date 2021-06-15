@@ -28,6 +28,7 @@
 //
 
 #include "TableView.h"
+#include "Column.h"
 
 namespace ecs
 {
@@ -38,6 +39,8 @@ namespace ecs
         if (!table->hasComponent(cid)) {
             return {};
         }
-        return table->columns[cid]->getComponentData<T>();
+        Column * col = table->columns.at(cid).get();
+
+        return col->getComponentData<T>();
     }
 }

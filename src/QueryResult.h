@@ -100,9 +100,13 @@ namespace ecs
         bool inheritance;
         bool thread;
 
+        uint64_t updatedAfter = 0;
+        uint32_t processed = 0;
     public:
         uint32_t total;
         //bool valid;
+
+        uint32_t getProcessed() const { return processed;  }
 
         QueryResult(World * world,
                     const std::vector<Table *> & tableList,
@@ -112,6 +116,11 @@ namespace ecs
                     bool inheritance,
                     bool thread
         );
+
+        void onlyUpdatedAfter(uint64_t seq)
+        {
+            updatedAfter = seq;
+        }
 
         [[nodiscard]] uint32_t count() const
         {
@@ -181,10 +190,10 @@ namespace ecs
                             std::index_sequence<I...>) const;
 
         template<typename ... U, typename Func>
-        void each(Func && f) const;
+        void each(Func && f);
 
         template<typename ... U, typename Func>
-        void eachView(Func && f,
+        uint32_t eachView(Func && f,
                       const std::array<component_id_t, sizeof...(U)> & comps,
                       const std::array<bool, sizeof...(U) + 1> & mp,
                       const TableView & view) const;
@@ -237,27 +246,37 @@ namespace ecs
     }
 
     template<typename ... U, typename Func>
-    void QueryResult::eachView(Func && f,
+    uint32_t QueryResult::eachView(Func && f,
                                const std::array<component_id_t, sizeof...(U)> & comps,
                                const std::array<bool, sizeof...(U) + 1> & mp,
                                const TableView & view) const
     {
+        uint32_t proc = 0;
         auto columns = view.getColumns<U...>(comps);
 
         for (auto row: view) {
+            entity_t ent = view.entity(row);
+            if(updatedAfter > 0) {
+                if(world->entities[index(ent)].updateSequence <= updatedAfter) {
+                    continue;
+                }
+            }
             //for(size_t row = view.startRow; row < view.count + view.startRow; row++){
             std::tuple<EntityHandle, U * ...> result;
-            std::get<0>(result) = EntityHandle{view.entity(row), world};
+            std::get<0>(result) = EntityHandle{ent, world};
             populateResult<std::tuple_size<decltype(result)>() - sizeof...(U)>(
-                view.entity(row), view, columns, result, comps, mp, row,
+                ent, view, columns, result, comps, mp, row,
                 std::make_index_sequence<sizeof...(U)>()
             );
             std::apply(f, result);
+            proc++;
         }
+
+        return proc;
     }
 
     template<typename ... U, typename Func>
-    void QueryResult::each(Func && f) const
+    void QueryResult::each(Func && f)
     {
         std::array<component_id_t, sizeof...(U)> comps = {
             world->getComponentId<std::remove_const_t<U>>()...
@@ -272,7 +291,7 @@ namespace ecs
             for (auto & view: *this) {
                 auto jh = job->create(
                     [=]() {
-                        eachView<U...>(f, comps, mp, view);
+                        return eachView<U...>(f, comps, mp, view);
                     }
                 );
 
@@ -283,11 +302,12 @@ namespace ecs
 
             for (auto & jh: jobs) {
                 job->awaitCompletion(jh);
+                processed += job->getJobResult(jh);
             }
             jobs.clear();
         } else {
             for (auto & view: *this) {
-                eachView<U...>(f, comps, mp, view);
+                processed += eachView<U...>(f, comps, mp, view);
             }
         }
     }

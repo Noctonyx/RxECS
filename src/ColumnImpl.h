@@ -25,13 +25,23 @@
 
 #pragma once
 
+#include <functional>
+#include <span>
+#include <vector>
+
 #include "Entity.h"
 #include "World.h"
-#include "System.h"
-#include "EntityHandle.h"
-#include "QueryImpl.h"
-#include "SystemImpl.h"
-#include "EntityImpl.h"
-#include "Filter.h"
-#include "TableViewImpl.h"
-#include "ColumnImpl.h"
+
+namespace ecs
+{
+    template<class T>
+    std::span<const T> Column::getComponentData()
+    {
+        //component_id_t cid = world->getComponentId<T>();
+
+        //bool b1 = world->getComponentId<T>() == componentId;
+        assert((world->getComponentId<T>() == componentId));
+        const T* x = reinterpret_cast<const T*>(ptr);
+        return std::span<const T>(x, count);
+    }
+}

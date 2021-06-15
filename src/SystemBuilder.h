@@ -111,5 +111,7 @@ namespace ecs
 
         template <typename U, typename Func>
         SystemBuilder& execute(Func&& f);
+
+        SystemBuilder& withUpdates();
     };
 }

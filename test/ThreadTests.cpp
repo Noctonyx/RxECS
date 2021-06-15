@@ -62,6 +62,7 @@ public:
     IMPLEMENT_MOCK1 (schedule);
     IMPLEMENT_CONST_MOCK1 (isComplete);
     IMPLEMENT_MOCK1 (awaitCompletion);
+    IMPLEMENT_MOCK1 (getJobResult);
 };
 using trompeloeil::_;
 
@@ -88,7 +89,7 @@ TEST_SUITE("Threads")
          );
 
         std::shared_ptr<int> jh = std::make_shared<int>(4);
-        std::function<void(void)> f;
+        std::function<uint32_t(void)> f;
 
         ALLOW_CALL(j1, create(_)).LR_SIDE_EFFECT(f = _1).RETURN(jh);
         ALLOW_CALL(j1, schedule(jh)).LR_SIDE_EFFECT(f());
