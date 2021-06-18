@@ -38,10 +38,12 @@ namespace ecs
 
         std::set<component_id_t> with = {world->getComponentId<TArgs>()...};
         q = world->createQuery(with).id;
-        world->getUpdate<System>(id)->query = q;
-        for (auto value: with) {
-            world->getUpdate<System>(id)->reads.insert(value);
-        }
+        world->update<System>(id, [=](auto * s){
+            s->query = q;
+            for (auto value: with) {
+                s->reads.insert(value);
+            }
+        });
 
         qb = QueryBuilder{q, world};
 
@@ -53,10 +55,11 @@ namespace ecs
     {
         world->markSystemsDirty();
 
-        auto s = world->getUpdate<System>(id);
-
-        s->stream = world->getComponentId<T>();
-        s->reads.insert(world->getComponentId<T>());
+        //auto s = world->getUpdate<System>(id);
+        world->update<System>(id, [=](auto * s){
+            s->stream = world->getComponentId<T>();
+            s->reads.insert(world->getComponentId<T>());
+        });
 
         stream = id;
         return *this;
@@ -97,12 +100,15 @@ namespace ecs
         assert(q);
         qb.withRelation<T, U ...>();
 
-        world->getUpdate<System>(id)->reads.insert(world->getComponentId<T>());
-
         std::array<component_id_t, sizeof...(U)> comps = {world->getComponentId<U>()...};
-        for (auto value : comps) {
-            world->getUpdate<System>(id)->reads.insert(value);
-        }
+
+        world->update<System>(id, [&](System * sp){
+            sp->reads.insert(world->getComponentId<T>());
+            for (auto value : comps) {
+                sp->reads.insert(value);
+            }
+        });
+
         return *this;
     }
 
@@ -115,9 +121,11 @@ namespace ecs
         qb.withOptional<TArgs ...>();
 
         std::array<component_id_t, sizeof...(TArgs)> comps = {world->getComponentId<TArgs>()...};
-        for (auto value : comps) {
-            world->getUpdate<System>(id)->reads.insert(value);
-        }
+        world->update<System>(id, [&](System * sp){
+            for (auto value : comps) {
+                sp->reads.insert(value);
+            }
+        });
 
         return *this;
     }
@@ -166,11 +174,12 @@ namespace ecs
     {
         world->markSystemsDirty();
 
-        auto s = world->getUpdate<System>(id);
         std::array<component_id_t, sizeof...(TArgs)> comps = {world->getComponentId<TArgs>() ...};
-        for (auto c: comps) {
-            s->reads.insert(c);
-        }
+        world->update<System>(id, [&](auto * s){
+            for (auto c: comps) {
+                s->reads.insert(c);
+            }
+        });
 
         return *this;
     }
@@ -180,11 +189,12 @@ namespace ecs
     {
         world->markSystemsDirty();
 
-        auto s = world->getUpdate<System>(id);
         std::array<component_id_t, sizeof...(TArgs)> comps = {world->getComponentId<TArgs>() ...};
-        for (auto c: comps) {
-            s->writes.insert(c);
-        }
+        world->update<System>(id, [&](auto * s){
+            for (auto c: comps) {
+                s->writes.insert(c);
+            }
+        });
 
         return *this;
     }
@@ -194,11 +204,12 @@ namespace ecs
     {
         world->markSystemsDirty();
 
-        auto s = world->getUpdate<System>(id);
         std::array<component_id_t, sizeof...(TArgs)> comps = {world->getComponentId<TArgs>() ...};
-        for (auto c: comps) {
-            s->streamReads.insert(c);
-        }
+        world->update<System>(id, [&](auto * s){
+            for (auto c: comps) {
+                s->streamReads.insert(c);
+            }
+        });
 
         return *this;
     }
@@ -208,11 +219,12 @@ namespace ecs
     {
         world->markSystemsDirty();
 
-        auto s = world->getUpdate<System>(id);
         std::array<component_id_t, sizeof...(TArgs)> comps = {world->getComponentId<TArgs>() ...};
-        for (auto c: comps) {
-            s->streamWrites.insert(c);
-        }
+        world->update<System>(id, [&](auto * s){
+            for (auto c: comps) {
+                s->streamWrites.insert(c);
+            }
+        });
 
         return *this;
     }
@@ -223,29 +235,31 @@ namespace ecs
         assert(q);
         assert(!stream);
 
-        auto s = world->getUpdate<System>(id);
+        //auto s = world->getUpdate<System>(id);
 
-        assert(s->groupId);
+        world->update<System>(id, [=](System * s){
+            assert(s->groupId);
 
-        auto mutableParameters = get_mutable_parameters(f);
-        std::array<component_id_t, sizeof...(U)> comps = {world->getComponentId<U>() ...};
+            auto mutableParameters = get_mutable_parameters(f);
+            std::array<component_id_t, sizeof...(U)> comps = {world->getComponentId<U>() ...};
 
-        uint32_t i = 0;
-        for (auto mutableParameter: mutableParameters) {
-            if (i > 0) {
-                if (mutableParameter) {
-                    s->writes.insert(comps[i - 1]);
-                } else {
-                    s->reads.insert(comps[i - 1]);
+            uint32_t i = 0;
+            for (auto mutableParameter: mutableParameters) {
+                if (i > 0) {
+                    if (mutableParameter) {
+                        s->writes.insert(comps[i - 1]);
+                    } else {
+                        s->reads.insert(comps[i - 1]);
+                    }
                 }
+                i++;
             }
-            i++;
-        }
 
-        s->queryProcessor = [=](QueryResult& res) {
-            res.each<U...>(f);
-            return res.getProcessed();
-        };
+            s->queryProcessor = [=](QueryResult& res) {
+                res.each<U...>(f);
+                return res.getProcessed();
+            };
+        });
 
         return *this;
     }
@@ -256,12 +270,12 @@ namespace ecs
         assert(!q);
         assert(!stream);
 
-        auto s = world->getUpdate<System>(id);
-        assert(s->groupId);
-
-        s->executeProcessor = [=](ecs::World * w) {
-            f(w);
-        };
+        world->update<System>(id, [=](System * s){
+            assert(s->groupId);
+            s->executeProcessor = [=](ecs::World * w) {
+                f(w);
+            };
+        });
 
         return *this;
     }
@@ -272,12 +286,13 @@ namespace ecs
         assert(q);
         assert(!stream);
 
-        auto s = world->getUpdate<System>(id);
-        assert(s->groupId);
-
-        s->executeIfNoneProcessor = [=](ecs::World * w) {
-            f(w);
-        };
+//        auto s = world->getUpdate<System>(id);
+        world->update<System>(id, [=](System * s){
+            assert(s->groupId);
+            s->executeIfNoneProcessor = [=](ecs::World * w) {
+                f(w);
+            };
+        });
 
         return *this;
     }
@@ -288,17 +303,18 @@ namespace ecs
         assert(!q);
         assert(stream);
 
-        auto s = world->getUpdate<System>(id);
+        //auto s = world->getUpdate<System>(id);
 
-        if (!s->groupId) {
-            throw std::runtime_error("Missing group for System");
-        }
+        world->update<System>(id, [=](System * s){
+            if (!s->groupId) {
+                throw std::runtime_error("Missing group for System");
+            }
+            s->reads.insert(world->getComponentId<U>());
 
-        s->reads.insert(world->getComponentId<U>());
-
-        s->streamProcessor = [=](Stream * stream) {
-            stream->each<U>(f);
-        };
+            s->streamProcessor = [=](Stream * stream) {
+                stream->each<U>(f);
+            };
+        });
 
         return *this;
     }

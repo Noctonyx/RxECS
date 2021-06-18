@@ -140,10 +140,12 @@ TEST_SUITE("World")
                 auto gg = e.get<Carrier>();
                 CHECK(gg->p.use_count() == 1);
                 CHECK(!wp.expired());
-                auto gg2 = e.getUpdate<Carrier>();
+                auto gg2 = e.get<Carrier>();
                 CHECK(gg2->p.use_count() == 1);
                 CHECK(!wp.expired());
-                gg2->p.reset();
+                e.update<Carrier>([](Carrier * c){
+                    c->p.reset();
+                });
                 CHECK(wp.expired());
                 e.destroy();
                 CHECK(wp.expired());
@@ -178,7 +180,11 @@ TEST_SUITE("World")
         auto e = w.newEntity().id;
 
         CHECK(w.get<TestComponent>(e) == nullptr);
-        CHECK(w.getUpdate<TestComponent>(e) == nullptr);
+        int c = 0;
+        w.update<TestComponent>(e, [&](TestComponent * ){
+            c++;
+        });
+        CHECK(c == 0);
     }
 
     TEST_CASE("Many Entities")
@@ -525,7 +531,11 @@ TEST_SUITE("World")
         e.destroy();
 
         CHECK(e.get<TestComponent>() == nullptr);
-        CHECK(e.getUpdate<TestComponent>() == nullptr);
+        int c = 0;
+        e.update<TestComponent>( [&](TestComponent * ){
+            c++;
+        });
+        CHECK(c == 0);
     }
 
     TEST_CASE("Singletons")
@@ -732,5 +742,23 @@ TEST_SUITE("World")
         f = e1.getChildren();
         CHECK(f.count() == 0);
         e1.destroy();
+    }
+
+    TEST_CASE("Triggers")
+    {
+        ecs::World w;
+
+        struct C1 {};
+
+        auto e = w.newEntity();
+        e.add<ecs::EntityQueue>();
+
+        w.addRemoveTrigger<C1>(e);
+
+        auto e1 = w.newEntity();
+        e1.add<C1>();
+
+        e1.remove<C1>();
+
     }
 }

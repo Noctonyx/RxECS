@@ -23,16 +23,49 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#pragma once
+//
+// Created by shane on 18/06/2021.
+//
 
-#include "Entity.h"
-#include "World.h"
-#include "System.h"
-#include "EntityHandle.h"
-#include "QueryImpl.h"
-#include "SystemImpl.h"
-#include "EntityImpl.h"
-#include "Filter.h"
-#include "TableViewImpl.h"
-#include "ColumnImpl.h"
+#include <algorithm>
 #include "EntityQueue.h"
+#include "EntityHandle.h"
+
+namespace ecs
+{
+    std::mutex EntityQueue::mutex;
+
+    void EntityQueue::add(entity_t id)
+    {
+        std::lock_guard g(mutex);
+
+        entries.push_back({id, false});
+    }
+
+    void EntityQueue::remove(entity_t id)
+    {
+        std::lock_guard g(mutex);
+
+        auto it = std::find_if(
+            entries.begin(), entries.end(), [=](auto i) {
+                return i.entity == id;
+            }
+        );
+
+        if (it != entries.end()) {
+            entries.erase(it);
+        }
+    }
+
+    void EntityQueue::each(std::function<bool(EntityHandle)> && f)
+    {
+        for (auto & e: entries) {
+            if (!e.removed) {
+                auto r = f(EntityHandle{e.entity, world});
+                if (r) {
+                    e.removed = r;
+                }
+            }
+        }
+    }
+}

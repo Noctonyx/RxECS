@@ -34,7 +34,10 @@ add_library(RxECS STATIC
     src/Filter.cpp
     src/Filter.h
     src/TableViewImpl.h
- "src/ColumnImpl.h")
+    src/ColumnImpl.h
+    src/EntityQueue.h
+    src/EntityQueue.cpp
+)
 
  add_executable(RxECS_tests 
     test/TestMain.cpp

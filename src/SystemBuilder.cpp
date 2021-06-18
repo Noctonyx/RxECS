@@ -40,30 +40,27 @@ namespace ecs
 
     SystemBuilder & SystemBuilder::label(const entity_t label)
     {
-        auto sp = world->getUpdate<System>(id);
-
-        sp->labels.insert(label);
-        //sp->dirtyOrder = true;
+        world->update<System>(id, [=](System * sp){
+            sp->labels.insert(label);
+        });
 
         return *this;
     }
 
     SystemBuilder & SystemBuilder::before(const entity_t label)
     {
-        auto sp = world->getUpdate<System>(id);
-
-        sp->befores.insert(label);
-        //sp->dirtyOrder = true;
+        world->update<System>(id, [=](System * sp){
+            sp->befores.insert(label);
+        });
 
         return *this;
     }
 
     SystemBuilder & SystemBuilder::after(const entity_t label)
     {
-        auto sp = world->getUpdate<System>(id);
-
-        sp->afters.insert(label);
-        //sp->dirtyOrder = true;
+        world->update<System>(id, [=](System * sp){
+            sp->afters.insert(label);
+        });
 
         return *this;
     }
@@ -89,20 +86,22 @@ namespace ecs
     SystemBuilder & SystemBuilder::withInterval(float v)
     {
         world->markSystemsDirty();
+        world->update<System>(id, [=](System * sp){
+            sp->interval = v;
+        });
 
-        auto sp = world->getUpdate<System>(id);
-        sp->interval = v;
         return *this;
     }
 
     SystemBuilder & SystemBuilder::inGroup(entity_t group)
     {
+        assert(world->has<SystemGroup>(group));
         world->markSystemsDirty();
 
-        auto sp = world->getUpdate<System>(id);
-        assert(world->has<SystemGroup>(group));
+        world->update<System>(id, [=](System * sp){
+            sp->groupId = group;
+        });
 
-        sp->groupId = group;
         return *this;
     }
 
@@ -123,8 +122,9 @@ namespace ecs
         if(q) {
             qb.withJob();
         } else {
-            auto sp = world->getUpdate<System>(id);
-            sp->thread = true;
+            world->update<System>(id, [=](System * sp){
+                sp->thread = true;
+            });
         }
         return *this;
     }
@@ -133,8 +133,9 @@ namespace ecs
     {
         world->markSystemsDirty();
 
-        auto sp = world->getUpdate<System>(id);
-        sp->updatesOnly = true;
+        world->update<System>(id, [=](System * sp){
+            sp->updatesOnly = true;
+        });
 
         return *this;
     }

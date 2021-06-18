@@ -37,6 +37,7 @@
 #include "EntityHandle.h"
 #include "EntityImpl.h"
 #include "Filter.h"
+#include "EntityQueue.h"
 
 namespace ecs
 {
@@ -255,6 +256,9 @@ namespace ecs
         am.addComponentToArchetype(componentId, trans);
         setEntityUpdateSequence(id);
         moveEntity(id, at, trans);
+
+        auto * cd = getUpdate<Component>(componentId);
+        postEntity(id, cd->onAdds);
     }
 
     void World::addDeferred(const entity_t id, const component_id_t componentId)
@@ -286,6 +290,9 @@ namespace ecs
         am.removeComponentFromArchetype(componentId, trans);
         moveEntity(id, at, trans);
         setEntityUpdateSequence(id);
+
+        auto * cd = getUpdate<Component>(componentId);
+        postEntity(id, cd->onRemove);
     }
 
     void World::removeDeferred(entity_t id, component_id_t componentId)
@@ -353,6 +360,15 @@ namespace ecs
 
         table->setComponent(id, componentId, ptr);
         setEntityUpdateSequence(id);
+
+        auto cd = getComponentDetails(componentId);
+
+        for (auto ona: cd->onUpdates) {
+            if (has<EntityQueue>(ona)) {
+                auto eq = getUpdate<EntityQueue>(ona);
+                eq->add(id);
+            }
+        }
     }
 
     void World::setDeferred(entity_t id, component_id_t componentId, void * ptr)
@@ -500,10 +516,13 @@ namespace ecs
     QueryBuilder World::createQuery(const std::set<component_id_t> & with)
     {
         auto q = newEntity();
-        q.set<Query>(Query{.with = with, .without = {getComponentId<Prefab>()}});
+        q.set<Query>(Query{.with = with, .without = {getComponentId<Prefab>(), getComponentId<PendingDelete>()}});
 
-        auto aq = q.getUpdate<Query>();
-        aq->recalculateQuery(this);
+        update<Query>(
+            q.id, [this](Query * aq) {
+                aq->recalculateQuery(this);
+            }
+        );
         return QueryBuilder{q.id, this};
     }
 
@@ -588,7 +607,7 @@ namespace ecs
                     auto res = getResults(system->query);
                     system->count = res.count();
                     if (system->queryProcessor && system->count > 0) {
-                        if(system->updatesOnly) {
+                        if (system->updatesOnly) {
                             res.onlyUpdatedAfter(system->lastRunSequence);
                         }
                         system->count = system->queryProcessor(res);
@@ -1162,5 +1181,30 @@ namespace ecs
     void World::removeAsParent(entity_t id)
     {
         removeDynamicComponent(id);
+    }
+
+    void World::postEntity(entity_t id, std::vector<entity_t> & posts)
+    {
+        for (auto ona: posts) {
+            if (has<EntityQueue>(ona)) {
+                auto eq = getUpdate<EntityQueue>(ona);
+                eq->add(id);
+            }
+        }
+    }
+
+    void World::addRemoveTrigger(component_id_t componentId, entity_t entity)
+    {
+        auto cd = getUpdate<Component>(componentId);
+        cd->onRemove.push_back(entity);
+    }
+
+    void World::removeRemoveTrigger(component_id_t componentId, entity_t entity)
+    {
+        auto cd = getUpdate<Component>(componentId);
+        auto it = std::find(cd->onRemove.begin(), cd->onRemove.end(), entity);
+        if (it != cd->onRemove.end()) {
+            cd->onRemove.erase(it);
+        }
     }
 }

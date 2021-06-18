@@ -97,5 +97,4 @@ TEST_SUITE("Modules")
         w.setModuleObject(e, &c2);
         CHECK(w.getModuleObject<C2>() == nullptr);
     }
-
 }

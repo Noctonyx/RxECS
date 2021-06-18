@@ -37,11 +37,12 @@ namespace ecs
     QueryBuilder & QueryBuilder::without()
     {
         std::vector<component_id_t> without = {world->getComponentId<TArgs>()...};
-        auto qp = world->getUpdate<Query>(id);
-        for (auto w: without) {
-            qp->without.insert(w);
-        }
-        qp->recalculateQuery(world);
+        world->update<Query>(id, [&](Query * qp){
+            for (auto w: without) {
+                qp->without.insert(w);
+            }
+            qp->recalculateQuery(world);
+        });
 
         return *this;
     }
@@ -68,9 +69,9 @@ namespace ecs
         component_id_t relative = world->getComponentId<T>();
         std::set<component_id_t> targets = {world->getComponentId<U>() ...};
 
-        auto qp = world->getUpdate<Query>(id);
-
-        qp->relations.insert({relative, targets});
+        world->update<Query>(id, [=](Query * qp){
+            qp->relations.insert({relative, targets});
+        });
 
         return *this;
     }
@@ -79,10 +80,11 @@ namespace ecs
     QueryBuilder & QueryBuilder::withSingleton()
     {
         std::vector<component_id_t> singleton = {world->getComponentId<TArgs>()...};
-        auto qp = world->getUpdate<Query>(id);
-        for (auto w: singleton) {
-            qp->singleton.insert(w);
-        }
+        world->update<Query>(id, [=](Query * qp){
+            for (auto w: singleton) {
+                qp->singleton.insert(w);
+            }
+        });
 
         return *this;
     }
@@ -90,33 +92,39 @@ namespace ecs
     inline QueryBuilder & QueryBuilder::withParent(component_id_t parentId)
     {
         assert(world->has<Component>(parentId));
-        auto qp = world->getUpdate<Query>(id);
-        qp->with.insert(parentId);
-        qp->recalculateQuery(world);
+        //auto qp = world->getUpdate<Query>(id);
+        world->update<Query>(id, [=](Query * q){
+            q->with.insert(parentId);
+            q->recalculateQuery(world);
+        });
 
         return *this;
     }
 
     inline QueryBuilder & QueryBuilder::withPrefabs()
     {
-        auto qp = world->getUpdate<Query>(id);
-        qp->without.erase(world->getComponentId<Prefab>());
-        qp->recalculateQuery(world);
+        world->update<Query>(id, [=](Query * qp){
+            qp->without.erase(world->getComponentId<Prefab>());
+            qp->recalculateQuery(world);
+        });
+
         return *this;
     }
 
     inline QueryBuilder & QueryBuilder::withInheritance(bool inherit)
     {
-        auto qp = world->getUpdate<Query>(id);
-        qp->inheritance = inherit;
+        world->update<Query>(id, [=](Query * qp){
+            qp->inheritance = inherit;
+        });
 
         return *this;
     }
 
     inline QueryBuilder & QueryBuilder::withJob()
     {
-        auto qp = world->getUpdate<Query>(id);
-        qp->thread = true;
+        world->update<Query>(id, [](Query * qp){
+            qp->thread = true;
+        });
         return *this;
     }
 }

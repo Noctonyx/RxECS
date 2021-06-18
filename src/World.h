@@ -85,6 +85,11 @@ namespace ecs
     {
     };
 
+    struct PendingDelete
+    {
+
+    };
+
     struct WorldIterator
     {
         World * world;
@@ -212,8 +217,8 @@ namespace ecs
 
         template<typename T>
         const T * get(entity_t id, bool inherit = false);
-        template<typename T>
-        T * getUpdate(entity_t id);
+        template<class T>
+        void update(entity_t id, std::function<void(T *)> && f);
 
         template<typename T, typename U>
         const U * getRelated(entity_t id);
@@ -222,7 +227,6 @@ namespace ecs
         EntityHandle getRelatedEntity(entity_t id);
 
         const void * get(entity_t id, component_id_t componentId, bool inherited = false);
-        void * getUpdate(entity_t id, component_id_t componentId);
 
         template<typename T>
         void set(entity_t id, const T & value);
@@ -337,6 +341,15 @@ namespace ecs
 
         Filter createFilter(std::vector<component_id_t> with = {}, std::vector<component_id_t> without = {});
 
+        template<class T>
+        void addRemoveTrigger(entity_t id);
+
+        template<class T>
+        void removeRemoveTrigger(entity_t id);
+
+        void addRemoveTrigger(component_id_t componentId, entity_t entity);
+        void removeRemoveTrigger(component_id_t componentId, entity_t entity);
+
     protected:
         uint16_t getEntityArchetype(entity_t id) const;
         void moveEntity(entity_t id, uint16_t from, const ArchetypeTransition & trans);
@@ -353,6 +366,12 @@ namespace ecs
 
         component_id_t createDynamicComponent(entity_t entityId);
         void removeDynamicComponent(entity_t entityId);
+
+        template<typename T>
+        T * getUpdate(entity_t id);
+        void * getUpdate(entity_t id, component_id_t componentId);
+
+        void postEntity(entity_t id, std::vector<entity_t> & posts);
 
     public:
         [[nodiscard]] std::vector<entity_t> getPipelineGroupSequence() const
@@ -689,5 +708,32 @@ namespace ecs
     std::vector<component_id_t> World::makeComponentList()
     {
         return std::vector<component_id_t>{getComponentId<Comp>()...};
+    }
+
+    template<class T>
+    void World::update(entity_t id, std::function<void(T *)> && f)
+    {
+        T * v = getUpdate<T>(id);
+        if (v == nullptr) {
+            return;
+        }
+        f(v);
+
+        auto cd = getUpdate<Component>(getComponentId<T>());
+        postEntity(id, cd->onUpdates);
+    }
+
+    template<class T>
+    void World::addRemoveTrigger(entity_t id)
+    {
+        auto compId = getComponentId<T>();
+        addRemoveTrigger(compId, id);
+    }
+
+    template<class T>
+    void World::removeRemoveTrigger(entity_t id)
+    {
+        auto compId = getComponentId<T>();
+        removeRemoveTrigger(compId, id);
     }
 }

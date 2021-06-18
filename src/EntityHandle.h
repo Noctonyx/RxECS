@@ -26,6 +26,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "ComponentIterator.h"
 #include "Entity.h"
@@ -40,10 +41,10 @@ namespace ecs
         entity_t id;
         World * world;
 
-        template <typename T>
+        template<typename T>
         EntityHandle & set(const T & v);
 
-        template <typename T>
+        template<typename T>
         EntityHandle & add();
         //EntityHandle & addDynamic(component_id_t id);
         EntityHandle & addParent(component_id_t id);
@@ -51,37 +52,37 @@ namespace ecs
         EntityHandle & setAsParent();
         EntityHandle & removeAsParent();
 
-        template <typename T>
-        T * addAndUpdate();
+        template<typename T>
+        void addAndUpdate(std::function<void(T *)> && f);
 
-        template <typename T>
+        template<typename T>
         EntityHandle & addDeferred();
 
-        template <typename T>
+        template<typename T>
         EntityHandle & removeDeferred();
 
         EntityHandle & destroyDeferred();
 
-        template <typename T>
+        template<typename T>
         EntityHandle & setDeferred(const T & value);
 
-        template <typename T>
+        template<typename T>
         bool has();
         bool hasParent(component_id_t parentId) const;
 
-        template <typename T>
-        T * getUpdate();
+        template<class T>
+        void update(std::function<void(T *)> && f);
 
-        template <typename T>
+        template<typename T>
         const T * get(bool inherit = false);
 
-        template <typename U, typename T>
+        template<typename U, typename T>
         const T * getRelated();
 
-        template <typename T>
+        template<typename T>
         EntityHandle getRelatedEntity();
 
-        template <typename T>
+        template<typename T>
         EntityHandle & remove();
         EntityHandle & removeParent(component_id_t parentId);
 
@@ -113,6 +114,11 @@ namespace ecs
         ComponentIterator begin();
         ComponentIterator end();
 
-        Filter getChildren(const std::vector<component_id_t> & with = {}, const std::vector<component_id_t> & without = {} );
+        Filter
+        getChildren(const std::vector<component_id_t> & with = {}, const std::vector<component_id_t> & without = {});
+    protected:
+        template<typename T>
+        T * getUpdate();
+
     };
 }

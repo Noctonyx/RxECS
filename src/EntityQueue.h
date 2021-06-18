@@ -23,16 +23,36 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#pragma once
+//
+// Created by shane on 18/06/2021.
+//
 
+#ifndef INDUSTRONAUT_ENTITYQUEUE_H
+#define INDUSTRONAUT_ENTITYQUEUE_H
+
+#include <functional>
+#include <mutex>
 #include "Entity.h"
-#include "World.h"
-#include "System.h"
 #include "EntityHandle.h"
-#include "QueryImpl.h"
-#include "SystemImpl.h"
-#include "EntityImpl.h"
-#include "Filter.h"
-#include "TableViewImpl.h"
-#include "ColumnImpl.h"
-#include "EntityQueue.h"
+
+namespace ecs {
+    class World;
+
+    struct EntityQueue {
+        static std::mutex mutex;
+
+        struct Entry {
+            entity_t entity;
+            bool removed;
+        };
+
+        World * world;
+
+        std::vector<Entry> entries;
+
+        void add(entity_t id);
+        void remove(entity_t id);
+        void each(std::function<bool(EntityHandle)> && f);
+    };
+}
+#endif //INDUSTRONAUT_ENTITYQUEUE_H
