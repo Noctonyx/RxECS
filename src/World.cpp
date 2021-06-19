@@ -705,11 +705,13 @@ namespace ecs
             }
         }
         if (systemsToRun.empty()) {
+            grp->executionSequence.clear();
             return;
         }
         uint32_t sentinel = 0;
 
         std::deque<BackgroundSystem> inFlights{};
+        std::vector<systemid_t> sequence;
 
         while (!systemsToRun.empty()) {
             auto system_entity = systemsToRun.front();
@@ -795,7 +797,7 @@ namespace ecs
             }
             sentinel = 0;
             auto jr = executeSystem(system_entity);
-            grp->executionSequence.push_back(system_entity);
+            sequence.push_back(system_entity);
             if (jr != std::nullopt) {
                 inFlights.emplace_back(jr.value(), system, system_entity);
                 jobInterface->schedule(jr.value());
@@ -834,6 +836,7 @@ namespace ecs
             }
             inFlights.pop_front();
         }
+        grp->executionSequence = std::move(sequence);
         //const auto end = std::chrono::high_resolution_clock::now();
     }
 
@@ -847,7 +850,7 @@ namespace ecs
         }
 
         //OPTICK_EVENT()
-        group_details->executionSequence.clear();
+        //group_details->executionSequence.clear();
 
         float savedDelta = deltaTime_;
 

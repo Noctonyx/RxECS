@@ -307,15 +307,19 @@ namespace ecs
             std::vector<JobInterface::JobHandle> jobs;
 
             for (auto & view: *this) {
-                auto jh = job->create(
-                    [=]() {
-                        return eachView<U...>(f, comps, mp, view);
-                    }
-                );
+                if(view.count <= 20) {
+                    processed += eachView<U...>(f, comps, mp, view);
+                } else {
+                    auto jh = job->create(
+                        [=]() {
+                            return eachView<U...>(f, comps, mp, view);
+                        }
+                        );
 
-                job->schedule(jh);
+                    job->schedule(jh);
 
-                jobs.push_back(jh);
+                    jobs.push_back(jh);
+                }
             }
 
             for (auto & jh: jobs) {
