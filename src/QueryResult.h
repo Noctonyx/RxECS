@@ -202,7 +202,7 @@ namespace ecs
                           const std::array<bool, sizeof...(U) + 1> & mp,
                           const TableView & view) const;
 
-        template<int I>
+        template<size_t I>
         void setupUpdateTriggerLists(std::array<component_id_t, I> & comps, const std::array<bool, I + 1> & mp);
     };
 
@@ -256,23 +256,23 @@ namespace ecs
     uint32_t QueryResult::eachView(Func && f,
                                    const std::array<component_id_t, sizeof...(U)> & comps,
                                    const std::array<bool, sizeof...(U) + 1> & mp,
-                                   const TableView & view) const
+                                   const TableView & tableView) const
     {
         uint32_t proc = 0;
-        auto columns = view.getColumns<U...>(comps);
+        auto columns = tableView.getColumns<U...>(comps);
 
-        for (auto row: view) {
-            entity_t ent = view.entity(row);
+        for (auto row: tableView) {
+            entity_t ent = tableView.entity(row);
             if (updatedAfter > 0) {
                 if (world->entities[index(ent)].updateSequence <= updatedAfter) {
                     continue;
                 }
             }
-            //for(size_t row = view.startRow; row < view.count + view.startRow; row++){
+            //for(size_t row = tableView.startRow; row < tableView.count + tableView.startRow; row++){
             std::tuple<EntityHandle, U * ...> result;
             std::get<0>(result) = EntityHandle{ent, world};
             populateResult<std::tuple_size<decltype(result)>() - sizeof...(U)>(
-                ent, view, columns, result, comps, mp, row,
+                ent, tableView, columns, result, comps, mp, row,
                 std::make_index_sequence<sizeof...(U)>()
             );
             std::apply(f, result);
@@ -297,7 +297,7 @@ namespace ecs
         std::array<component_id_t, sizeof...(U)> comps = {
             world->getComponentId<std::remove_const_t<U>>()...
         };
-        auto mp = get_mutable_parameters(f);
+        std::array<bool, sizeof...(U)+1> mp = get_mutable_parameters(f);
 
         setupUpdateTriggerLists(comps, mp);
 
@@ -330,7 +330,7 @@ namespace ecs
         }
     }
 
-    template<int I>
+    template<size_t I>
     void QueryResult::setupUpdateTriggerLists(std::array<component_id_t, I> & comps,
                                               const std::array<bool, I + 1> & mutableParameters)
     {

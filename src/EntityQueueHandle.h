@@ -30,6 +30,9 @@
 #ifndef INDUSTRONAUT_ENTITYQUEUEHANDLE_H
 #define INDUSTRONAUT_ENTITYQUEUEHANDLE_H
 
+#include <functional>
+#include "EntityHandle.h"
+
 namespace ecs
 {
     struct EntityQueueHandle
@@ -55,9 +58,20 @@ namespace ecs
         template<class T>
         EntityQueueHandle & removeTriggerOnUpdate();
 
+        void post(entity_t id) const;
+
         void each(std::function<bool(EntityHandle)> && f);
 
-        void destroy();
+        void destroy() const;
+
+        bool operator==(const EntityQueueHandle & other) const
+        {
+            return id == other.id && world == other.world;
+        }
+
+        operator entity_t() const {
+            return id;
+        }
     };
 
 }

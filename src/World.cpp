@@ -68,16 +68,16 @@ namespace ecs
         };
 
         set(componentBootstrapId, componentBootstrapId, &componentBootstrap);
-        set<Name>(getComponentId<Component>(), {.name="Component"});
-        set<Name>(getComponentId<Name>(), {.name="Name"});
+        set<Name>(getComponentId<Component>(), {.name = "Component"});
+        set<Name>(getComponentId<Name>(), {.name = "Name"});
 
         // Query to find queries
         queryQuery = createQuery<Query>().id;
 
         // query to find systems
         systemQuery = createQuery<System>()
-            .withRelation<SetForSystem, SystemSet>()
-            .withRelation<HasModule, ModuleComponent>().id;
+                      .withRelation<SetForSystem, SystemSet>()
+                      .withRelation<HasModule, ModuleComponent>().id;
         systemGroupQuery = createQuery<SystemGroup>().id;
         streamQuery = createQuery<StreamComponent>().id;
     }
@@ -85,12 +85,13 @@ namespace ecs
     World::~World()
     {
         getResults(streamQuery).each<StreamComponent>(
-            [](EntityHandle, StreamComponent * s) {
+            [](EntityHandle, StreamComponent * s)
+            {
                 delete s->ptr;
             }
         );
 
-        for (auto &[k, v]: singletons) {
+        for (auto & [k, v]: singletons) {
             auto cd = getComponentDetails(k);
             cd->componentDestructor(v, cd->size, 1);
             delete[] static_cast<char *>(v);
@@ -165,7 +166,8 @@ namespace ecs
         tables[getEntityArchetype(e.id)]->removeEntity(e.id);
 
         ensureTableForArchetype(trans.to_at);
-        Table::copyEntity(this, tables[prefabAt].get(), tables[trans.to_at].get(), prefab, e.id, trans);
+        Table::copyEntity(this, tables[prefabAt].get(), tables[trans.to_at].get(), prefab, e.id,
+                          trans);
         entities[index(e.id)].archetype = trans.to_at;
         return e;
     }
@@ -490,7 +492,7 @@ namespace ecs
 
         std::vector<uint16_t> removeList;
 
-        for (auto &[k, t]: tables) {
+        for (auto & [k, t]: tables) {
 
             if (t == nullptr || t->hasComponent(entityId)) {
                 removeList.push_back(k);
@@ -514,10 +516,13 @@ namespace ecs
     QueryBuilder World::createQuery(const std::set<component_id_t> & with)
     {
         auto q = newEntity();
-        q.set<Query>(Query{.with = with, .without = {getComponentId<Prefab>(), getComponentId<PendingDelete>()}});
+        q.set<Query>(Query{
+            .with = with, .without = {getComponentId<Prefab>(), getComponentId<PendingDelete>()}
+        });
 
         update<Query>(
-            q.id, [this](Query * aq) {
+            q.id, [this](Query * aq)
+            {
                 aq->recalculateQuery(this);
             }
         );
@@ -548,7 +553,7 @@ namespace ecs
 
         markSystemsDirty();
 
-        return SystemBuilder{s.id, 0, 0, this, {}};
+        return SystemBuilder{SystemType::None, s.id, 0, 0, this, {}, {}};
     }
 
     void World::deleteQuery(queryid_t q)
@@ -613,11 +618,13 @@ namespace ecs
                     if (system->executeIfNoneProcessor && system->count == 0) {
                         if (system->thread) {
                             return jobInterface->create(
-                                [=, this]() {
+                                [=, this]()
+                                {
                                     system->executeIfNoneProcessor(this);
                                     const auto end = std::chrono::high_resolution_clock::now();
-                                    system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
-                                        float>(end - system->startTime).count();
+                                    system->executionTime = system->executionTime * 0.9f + 0.1f *
+                                        std::chrono::duration<
+                                            float>(end - system->startTime).count();
                                     return 0;
                                 }
                             );
@@ -629,15 +636,24 @@ namespace ecs
                     auto str = getStream(system->stream);
                     system->count = str->active.size();
                     system->streamProcessor(getStream(system->stream));
+                } else if (system->entityQueue) {
+                    auto eq = getEntityQueue(system->entityQueue);
+                    system->count = eq->entries.size();
+                    eq->each([&](EntityHandle e)
+                    {
+                        return system->queueProcessor(e);
+                    });
                 } else {
                     system->count = 1;
                     if (system->thread) {
                         return jobInterface->create(
-                            [=, this]() {
+                            [=, this]()
+                            {
                                 system->executeProcessor(this);
                                 const auto end = std::chrono::high_resolution_clock::now();
-                                system->executionTime = system->executionTime * 0.9f + 0.1f * std::chrono::duration<
-                                    float>(end - system->startTime).count();
+                                system->executionTime = system->executionTime * 0.9f + 0.1f *
+                                    std::chrono::duration<
+                                        float>(end - system->startTime).count();
                                 return 0;
                             }
                         );
@@ -666,16 +682,16 @@ namespace ecs
 
         auto grp = getUpdate<SystemGroup>(systemGroup);
 
-        for (auto &[k, v]: grp->writeCounts) {
+        for (auto & [k, v]: grp->writeCounts) {
             writeCounts[k] = v;
         }
-        for (auto &[k, v]: grp->streamWriteCounts) {
+        for (auto & [k, v]: grp->streamWriteCounts) {
             streamWriteCounts[k] = v;
         }
-        for (auto &[k, v]: grp->labelPreCounts) {
+        for (auto & [k, v]: grp->labelPreCounts) {
             labelPreCounts[k] = v;
         }
-        for (auto &[k, v]: grp->labelCounts) {
+        for (auto & [k, v]: grp->labelCounts) {
             labelCounts[k] = v;
         }
         for (auto & s: grp->systems) {
@@ -708,7 +724,7 @@ namespace ecs
                     }
                     throw std::runtime_error("Systems define a cycle and cannot run");
                 } else {
-//                    YieldProcessor();
+                    //                    YieldProcessor();
                     std::this_thread::yield();
                 }
             }
@@ -716,7 +732,7 @@ namespace ecs
             if (!inFlights.empty()) {
                 auto it = inFlights.begin();
                 while (it != inFlights.end()) {
-                    auto &[j, sys, syse] = *it;
+                    auto & [j, sys, syse] = *it;
 
                     if (jobInterface->isComplete(j)) {
                         for (auto & af: sys->labels) {
@@ -757,7 +773,7 @@ namespace ecs
             }
 
             for (auto & af: system->writes) {
-                for (auto &[j, s, e]: inFlights) {
+                for (auto & [j, s, e]: inFlights) {
                     if (s->writes.contains(af)) {
                         canProcess = false;
                     }
@@ -802,7 +818,7 @@ namespace ecs
         }
 
         while (!inFlights.empty()) {
-            auto &[j, sys, syse] = inFlights.front();
+            auto & [j, sys, syse] = inFlights.front();
             jobInterface->awaitCompletion(j);
             for (auto & af: sys->labels) {
                 labelCounts[af]--;
@@ -884,7 +900,8 @@ namespace ecs
         }
 
         getResults(streamQuery).each<StreamComponent>(
-            [](EntityHandle, StreamComponent * s) {
+            [](EntityHandle, StreamComponent * s)
+            {
                 s->ptr->clear();
             }
         );
@@ -903,13 +920,14 @@ namespace ecs
             case DeferredCommandType::Remove:
                 remove(command.entity, command.component);
                 break;
-            case DeferredCommandType::Set: {
-                set(command.entity, command.component, command.ptr);
-                auto cd = getComponentDetails(command.component);
-                cd->componentDestructor(command.ptr, cd->size, 1);
+            case DeferredCommandType::Set:
+                {
+                    set(command.entity, command.component, command.ptr);
+                    auto cd = getComponentDetails(command.component);
+                    cd->componentDestructor(command.ptr, cd->size, 1);
 
-                delete[] static_cast<char *>(command.ptr);
-            }
+                    delete[] static_cast<char *>(command.ptr);
+                }
                 break;
             }
         }
@@ -986,7 +1004,8 @@ namespace ecs
         if (queryQuery) {
             getResults(queryQuery)
                 .each<Query>(
-                    [&table, &ad](EntityHandle, Query * aq) {
+                    [&table, &ad](EntityHandle, Query * aq)
+                    {
                         assert(aq);
                         if (aq->interestedInArchetype(ad)) {
                             aq->tables.push_back(table);
@@ -1001,7 +1020,8 @@ namespace ecs
         if (queryQuery) {
             getResults(queryQuery)
                 .each<Query>(
-                    [&table](EntityHandle, Query * aq) {
+                    [&table](EntityHandle, Query * aq)
+                    {
                         assert(aq);
                         auto it = std::find(aq->tables.begin(), aq->tables.end(), table);
                         if (it != aq->tables.end()) {
@@ -1056,7 +1076,7 @@ namespace ecs
             }
         }
 
-        for (auto &[e, s]: toProcess) {
+        for (auto & [e, s]: toProcess) {
             for (auto & l: s->labels) {
                 grp->labelCounts[l]++;
             }
@@ -1097,7 +1117,8 @@ namespace ecs
         std::unordered_map<entity_t, std::vector<entity_t>> systems;
 
         getResults(systemQuery).each<System, SystemSet, ModuleComponent>(
-            [&](EntityHandle e, System * s, const SystemSet * set, const ModuleComponent * mod) {
+            [&](EntityHandle e, System * s, const SystemSet * set, const ModuleComponent * mod)
+            {
                 if ((set && !set->enabled) || !s->enabled) {
                     return;
                 }
@@ -1112,14 +1133,16 @@ namespace ecs
         std::vector<std::pair<SystemGroup *, entity_t>> grps;
 
         getResults(systemGroupQuery).each<SystemGroup>(
-            [&grps](EntityHandle e, SystemGroup * g) {
+            [&grps](EntityHandle e, SystemGroup * g)
+            {
                 grps.push_back({g, e.id});
             }
         );
 
         std::ranges::sort(
             grps, [](std::pair<SystemGroup *, entity_t> a,
-                     std::pair<SystemGroup *, entity_t> b) {
+                     std::pair<SystemGroup *, entity_t> b)
+            {
                 return a.first->sequence < b.first->sequence;
             }
         );
@@ -1144,7 +1167,8 @@ namespace ecs
         entities[i].updateSequence = updateSequence;
     }
 
-    Filter World::createFilter(std::vector<component_id_t> with, std::vector<component_id_t> without)
+    Filter World::createFilter(std::vector<component_id_t> with,
+                               std::vector<component_id_t> without)
     {
         std::vector<TableView> tvs;
 
@@ -1158,7 +1182,8 @@ namespace ecs
                 continue;
             }
 
-            std::ranges::set_intersection(at.components, without, std::back_inserter(without_overlap));
+            std::ranges::set_intersection(at.components, without,
+                                          std::back_inserter(without_overlap));
             if (!without_overlap.empty()) {
                 continue;
             }

@@ -43,7 +43,7 @@ namespace ecs
 
         entries.push_back({id, false});
     }
-
+#if 0
     void EntityQueue::remove(entity_t id)
     {
         std::lock_guard g(mutex);
@@ -58,7 +58,7 @@ namespace ecs
             entries.erase(it);
         }
     }
-
+#endif
     void EntityQueue::each(std::function<bool(EntityHandle)> && f)
     {
         std::lock_guard g(mutex);
@@ -95,8 +95,16 @@ namespace ecs
         }
     }
 
-    void EntityQueueHandle::destroy()
+    void EntityQueueHandle::destroy() const
     {
         world->destroyEntityQueue(id);
+    }
+
+    void EntityQueueHandle::post(entity_t entityId) const
+    {
+        auto eq = world->getEntityQueue(id);
+        if (eq) {
+            eq->add(entityId);
+        }
     }
 }

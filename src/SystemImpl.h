@@ -28,12 +28,16 @@
 #include <array>
 #include "System.h"
 #include "Stream.h"
+#include "SystemBuilder.h"
 
 namespace ecs
 {
     template<class ... TArgs>
     SystemBuilder & SystemBuilder::withQuery()
     {
+        assert(type == SystemType::None);
+        type = SystemType::Query;
+
         world->markSystemsDirty();
 
         std::set<component_id_t> with = {world->getComponentId<TArgs>()...};
@@ -53,6 +57,9 @@ namespace ecs
     template<class T>
     SystemBuilder & SystemBuilder::withStream()
     {
+        assert(type == SystemType::None);
+        type = SystemType::Stream;
+
         world->markSystemsDirty();
 
         //auto s = world->getUpdate<System>(id);
@@ -68,6 +75,8 @@ namespace ecs
     template<class ... TArgs>
     SystemBuilder & SystemBuilder::without()
     {
+        assert(type == SystemType::Query);
+
         world->markSystemsDirty();
 
         assert(q);
@@ -95,6 +104,7 @@ namespace ecs
     template<class T, class ... U>
     SystemBuilder & SystemBuilder::withRelation()
     {
+        assert(type == SystemType::Query);
         world->markSystemsDirty();
 
         assert(q);
@@ -115,6 +125,8 @@ namespace ecs
     template<class ... TArgs>
     SystemBuilder & SystemBuilder::withSingleton()
     {
+        assert(type == SystemType::Query);
+
         world->markSystemsDirty();
 
         if (q) {
@@ -214,12 +226,12 @@ namespace ecs
     template<typename ... U, typename Func>
     SystemBuilder & SystemBuilder::each(Func && f)
     {
+        assert(type == SystemType::Query);
         assert(q);
-        assert(!stream);
 
         //auto s = world->getUpdate<System>(id);
 
-        world->update<System>(id, [=](System * s){
+        world->update<System>(id, [&](System * s){
             assert(s->groupId);
 
             auto mutableParameters = get_mutable_parameters(f);
@@ -249,8 +261,8 @@ namespace ecs
     template<typename Func>
     SystemBuilder & SystemBuilder::execute(Func && f)
     {
-        assert(!q);
-        assert(!stream);
+        assert(type == SystemType::None);
+        type = SystemType::Execute;
 
         world->update<System>(id, [=](System * s){
             assert(s->groupId);
@@ -265,8 +277,8 @@ namespace ecs
     template<typename Func>
     SystemBuilder & SystemBuilder::executeIfNone(Func && f)
     {
+        assert(type == SystemType::Query);
         assert(q);
-        assert(!stream);
 
 //        auto s = world->getUpdate<System>(id);
         world->update<System>(id, [=](System * s){
@@ -282,7 +294,7 @@ namespace ecs
     template<typename U, typename Func>
     SystemBuilder & SystemBuilder::execute(Func && f)
     {
-        assert(!q);
+        assert(type == SystemType::Stream);
         assert(stream);
 
         //auto s = world->getUpdate<System>(id);

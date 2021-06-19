@@ -139,4 +139,29 @@ namespace ecs
 
         return *this;
     }
+
+    SystemBuilder & SystemBuilder::withEntityQueue(entity_t queueid)
+    {
+        assert(type == SystemType::None);
+        type = SystemType::Queue;
+
+        eq = EntityQueueHandle{queueid, world};
+        assert(world->has<HasEntityQueue>(queueid));
+
+        world->update<System>(id, [&](System * sp){
+            sp->entityQueue = queueid;
+        });
+
+        return *this;
+    }
+
+    SystemBuilder & SystemBuilder::eachEntity(std::function<bool(EntityHandle)> && f)
+    {
+        assert(type == SystemType::Queue);
+
+        world->update<System>(id, [&](System * sp){
+           sp->queueProcessor = std::move(f);
+        });
+        return *this;
+    }
 }

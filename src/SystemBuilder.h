@@ -28,25 +28,40 @@
 #include <string>
 #include "Entity.h"
 #include "QueryBuilder.h"
+#include "EntityQueueHandle.h"
 
 namespace ecs
 {
     class World;
 
+    enum class SystemType: uint8_t {
+        None = 0,
+        Query,
+        Stream,
+        Queue,
+        Execute
+    };
+
     struct SystemBuilder
     {
+        SystemType type;
+
         systemid_t id;
         queryid_t q = 0;
         component_id_t stream = 0;
+
         World* world;
 
         QueryBuilder qb;
+        EntityQueueHandle eq{};
 
         template<class ... TArgs>
         SystemBuilder& withQuery();
 
         template<class T>
         SystemBuilder& withStream();
+
+        SystemBuilder & withEntityQueue(entity_t id);
 
         template<class ... TArgs>
         SystemBuilder& without();
@@ -96,6 +111,8 @@ namespace ecs
         SystemBuilder& inGroup(const char * name);
 
         SystemBuilder& withJob();
+
+        SystemBuilder & eachEntity(std::function<bool(EntityHandle)> && f);
 
         template <typename ... U, typename Func>
         SystemBuilder & each(Func&& f);

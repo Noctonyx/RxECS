@@ -50,7 +50,9 @@ namespace ecs {
         std::mutex mutex{};
 
         void add(entity_t id);
+#if 0
         void remove(entity_t id);
+#endif
         void each(std::function<bool(EntityHandle)> && f);
 
         EntityQueue(World * world);

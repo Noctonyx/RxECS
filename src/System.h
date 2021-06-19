@@ -104,10 +104,11 @@ namespace ecs
     {
         queryid_t query = 0;
         World* world;
-        std::function<uint32_t(QueryResult&)> queryProcessor;
-        std::function<void(World *)> executeProcessor;
-        std::function<void(World *)> executeIfNoneProcessor;
-        std::function<void(Stream *)> streamProcessor;
+        std::function<uint32_t(QueryResult&)> queryProcessor{};
+        std::function<void(World *)> executeProcessor{};
+        std::function<void(World *)> executeIfNoneProcessor{};
+        std::function<void(Stream *)> streamProcessor{};
+        std::function<bool(EntityHandle)> queueProcessor{};
         bool enabled = true;
 
         std::set<entity_t> labels;
@@ -121,6 +122,7 @@ namespace ecs
         std::unordered_set<component_id_t> streamWrites;
 
         entity_t groupId = 0;
+        entity_t entityQueue;
 
         bool complete = false;
         bool ready = false;

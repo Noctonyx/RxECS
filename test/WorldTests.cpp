@@ -947,32 +947,106 @@ TEST_SUITE("World")
                 [](C1 * c) {
                     c->x = 3;
                 }
-                );
+            );
 
             eq.triggerOnUpdate<C1>();
 
             auto q = w.createQuery<C1>();
-            w.getResults(q.id).each<C1>([](ecs::EntityHandle , const C1 * ){
+            w.getResults(q.id).each<C1>(
+                [](ecs::EntityHandle, const C1 *) {
 
-            });
-            int c = 0;
-            eq.each(
-                [&](ecs::EntityHandle ) {
-                    c++;
-                    return true;
                 }
-                );
-            CHECK(c == 0);
-            w.getResults(q.id).each<C1>([](ecs::EntityHandle , C1 * ){
-
-            });
+            );
+            int c = 0;
             eq.each(
                 [&](ecs::EntityHandle) {
                     c++;
                     return true;
                 }
-                );
+            );
+            CHECK(c == 0);
+            w.getResults(q.id).each<C1>(
+                [](ecs::EntityHandle, C1 *) {
+
+                }
+            );
+            eq.each(
+                [&](ecs::EntityHandle) {
+                    c++;
+                    return true;
+                }
+            );
             CHECK(c == 1);
+        }
+
+        SUBCASE("On Update - System") {
+            auto e1 = w.newEntity();
+            e1.add<C1>();
+            e1.update<C1>(
+                [](C1 * c) {
+                    c->x = 3;
+                }
+            );
+
+            eq.triggerOnUpdate<C1>();
+
+            int c = 0;
+            int d = 0;
+            w.newEntity("Group:1").set<ecs::SystemGroup>({1, false, 0.f, 0.f});
+
+            SUBCASE("Const") {
+                w.createSystem("S1")
+                          .inGroup("Group:1")
+                          .withQuery<C1>()
+                          .each<C1>(
+                              [&](ecs::EntityHandle, const C1 *) {
+                                  c++;
+                              }
+                          );
+
+                eq.each(
+                    [&](ecs::EntityHandle) {
+                        d++;
+                        return true;
+                    }
+                );
+
+                w.step(1.0f);
+                CHECK(c == 1);
+                CHECK(d == 0);
+            }
+            SUBCASE("non-Const") {
+                w.createSystem("S1")
+                          .inGroup("Group:1")
+                          .withQuery<C1>()
+                          .each<C1>(
+                              [&](ecs::EntityHandle, C1 *) {
+                                  c++;
+                              }
+                          );
+
+                w.createSystem("S2")
+                    .inGroup("Group:1")
+                    .withEntityQueue(eq)
+                    .eachEntity(
+                        [&](ecs::EntityHandle) {
+                            d++;
+                            return true;
+                        }
+                        );
+
+                w.step(1.0f);
+#if 0
+                eq.each(
+                    [&](ecs::EntityHandle) {
+                        d++;
+                        return true;
+                    }
+                    );
+#endif
+                CHECK(c == 1);
+                CHECK(d == 1);
+            }
         }
     }
 }
