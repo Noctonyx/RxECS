@@ -23,18 +23,42 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#pragma once
+//
+// Created by shane on 19/06/2021.
+//
 
-#include "Entity.h"
-#include "World.h"
-#include "System.h"
-#include "EntityHandle.h"
-#include "QueryImpl.h"
-#include "SystemImpl.h"
-#include "EntityImpl.h"
-#include "Filter.h"
-#include "TableViewImpl.h"
-#include "ColumnImpl.h"
-#include "EntityQueue.h"
-#include "EntityQueueHandle.h"
-#include "EntityQueueImpl.h"
+#ifndef INDUSTRONAUT_ENTITYQUEUEHANDLE_H
+#define INDUSTRONAUT_ENTITYQUEUEHANDLE_H
+
+namespace ecs
+{
+    struct EntityQueueHandle
+    {
+        entity_t id;
+        World * world;
+
+        template<class T>
+        EntityQueueHandle & triggerOnAdd();
+
+        template<class T>
+        EntityQueueHandle & triggerOnRemove();
+
+        template<class T>
+        EntityQueueHandle & triggerOnUpdate();
+
+        template<class T>
+        EntityQueueHandle & removeTriggerOnAdd();
+
+        template<class T>
+        EntityQueueHandle & removeTriggerOnRemove();
+
+        template<class T>
+        EntityQueueHandle & removeTriggerOnUpdate();
+
+        void each(std::function<bool(EntityHandle)> && f);
+
+        void destroy();
+    };
+
+}
+#endif //INDUSTRONAUT_ENTITYQUEUEHANDLE_H

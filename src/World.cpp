@@ -203,6 +203,10 @@ namespace ecs
 
     void World::destroy(const entity_t id)
     {
+        if (has<HasEntityQueue>(id)) {
+            destroyEntityQueue(id);
+            return;
+        }
         if (has<System>(id)) {
             deleteSystem(id);
             return;
@@ -361,14 +365,8 @@ namespace ecs
         table->setComponent(id, componentId, ptr);
         setEntityUpdateSequence(id);
 
-        auto cd = getComponentDetails(componentId);
-
-        for (auto ona: cd->onUpdates) {
-            if (has<EntityQueue>(ona)) {
-                auto eq = getUpdate<EntityQueue>(ona);
-                eq->add(id);
-            }
-        }
+        auto cd = getUpdate<Component>(componentId);
+        postEntity(id, cd->onUpdates);
     }
 
     void World::setDeferred(entity_t id, component_id_t componentId, void * ptr)
@@ -1186,9 +1184,8 @@ namespace ecs
     void World::postEntity(entity_t id, std::vector<entity_t> & posts)
     {
         for (auto ona: posts) {
-            if (has<EntityQueue>(ona)) {
-                auto eq = getUpdate<EntityQueue>(ona);
-                eq->add(id);
+            if (queues.contains(ona)) {
+                queues[ona]->add(id);
             }
         }
     }
@@ -1206,5 +1203,58 @@ namespace ecs
         if (it != cd->onRemove.end()) {
             cd->onRemove.erase(it);
         }
+    }
+
+    void World::addAddTrigger(component_id_t componentId, entity_t entity)
+    {
+        auto cd = getUpdate<Component>(componentId);
+        cd->onAdds.push_back(entity);
+    }
+
+    void World::addUpdateTrigger(component_id_t componentId, entity_t entity)
+    {
+        auto cd = getUpdate<Component>(componentId);
+        cd->onUpdates.push_back(entity);
+    }
+
+    void World::removeAddTrigger(component_id_t componentId, entity_t entity)
+    {
+        auto cd = getUpdate<Component>(componentId);
+        auto it = std::find(cd->onAdds.begin(), cd->onAdds.end(), entity);
+        if (it != cd->onAdds.end()) {
+            cd->onAdds.erase(it);
+        }
+    }
+
+    EntityQueue * World::getEntityQueue(entity_t id) const
+    {
+        auto it = queues.find(id);
+        if (it == queues.end()) {
+            return nullptr;
+        }
+        return it->second.get();
+    }
+
+    EntityQueueHandle World::createEntityQueue(const char * name)
+    {
+        auto qid = newEntity(name).add<HasEntityQueue>();
+        auto q = std::make_unique<EntityQueue>(this);
+
+        queues[qid] = std::move(q);
+
+        return EntityQueueHandle{qid, this};
+    }
+
+    void World::destroyEntityQueue(entity_t eq)
+    {
+        if (!has<HasEntityQueue>(eq)) {
+            destroy(eq);
+        }
+
+        auto it = queues.find(eq);
+        assert(it != queues.end());
+        queues.erase(it);
+        remove<HasEntityQueue>(eq);
+        destroy(eq);
     }
 }

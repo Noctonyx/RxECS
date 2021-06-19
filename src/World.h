@@ -42,6 +42,7 @@
 #include "QueryBuilder.h"
 #include "Table.h"
 #include "SystemBuilder.h"
+#include "EntityQueueHandle.h"
 
 namespace ecs
 {
@@ -71,6 +72,7 @@ namespace ecs
     struct Stream;
     struct Query;
     struct Filter;
+    struct EntityQueue;
 
     struct EntityEntry
     {
@@ -88,6 +90,10 @@ namespace ecs
     struct PendingDelete
     {
 
+    };
+
+    struct HasEntityQueue
+    {
     };
 
     struct WorldIterator
@@ -276,6 +282,9 @@ namespace ecs
 
         SystemBuilder createSystem(const char * name = nullptr);
 
+        EntityQueueHandle createEntityQueue(const char * name = nullptr);
+        void destroyEntityQueue(entity_t eq);
+
         void deleteQuery(queryid_t q);
         void deleteSystem(systemid_t s);
         QueryResult getResults(queryid_t q);
@@ -343,12 +352,23 @@ namespace ecs
 
         template<class T>
         void addRemoveTrigger(entity_t id);
-
+        template<class T>
+        void addAddTrigger(entity_t id);
+        template<class T>
+        void addUpdateTrigger(entity_t id);
         template<class T>
         void removeRemoveTrigger(entity_t id);
+        template<class T>
+        void removeAddTrigger(entity_t id);
 
         void addRemoveTrigger(component_id_t componentId, entity_t entity);
+        void addAddTrigger(component_id_t componentId, entity_t entity);
+        void addUpdateTrigger(component_id_t componentId, entity_t entity);
         void removeRemoveTrigger(component_id_t componentId, entity_t entity);
+        void removeAddTrigger(component_id_t componentId, entity_t entity);
+        void removeUpdateTrigger(component_id_t componentId, entity_t entity);
+
+        EntityQueue * getEntityQueue(entity_t id) const;
 
     protected:
         uint16_t getEntityArchetype(entity_t id) const;
@@ -390,6 +410,8 @@ namespace ecs
 
         robin_hood::unordered_flat_map<uint16_t, std::unique_ptr<Table>> tables;
         //robin_hood::unordered_map<component_id_t> streams;
+
+        std::unordered_map<entity_t, std::unique_ptr<EntityQueue> > queues;
 
         float deltaTime_;
 
@@ -728,6 +750,20 @@ namespace ecs
     {
         auto compId = getComponentId<T>();
         addRemoveTrigger(compId, id);
+    }
+
+    template<class T>
+    void World::addAddTrigger(entity_t id)
+    {
+        auto compId = getComponentId<T>();
+        addAddTrigger(compId, id);
+    }
+
+    template<class T>
+    void World::addUpdateTrigger(entity_t id)
+    {
+        auto compId = getComponentId<T>();
+        addUpdateTrigger(compId, id);
     }
 
     template<class T>

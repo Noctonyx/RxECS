@@ -143,16 +143,18 @@ TEST_SUITE("World")
                 auto gg2 = e.get<Carrier>();
                 CHECK(gg2->p.use_count() == 1);
                 CHECK(!wp.expired());
-                e.update<Carrier>([](Carrier * c){
-                    c->p.reset();
-                });
+                e.update<Carrier>(
+                    [](Carrier * c) {
+                        c->p.reset();
+                    }
+                );
                 CHECK(wp.expired());
                 e.destroy();
                 CHECK(wp.expired());
             }
         }
         SUBCASE("Bulk") {
-            Carrier c2{ nullptr };
+            Carrier c2{nullptr};
             auto e = w.newEntity().set<Carrier>(c);
             CHECK(c.p.use_count() == 2);
             CHECK(!wp.expired());
@@ -181,9 +183,11 @@ TEST_SUITE("World")
 
         CHECK(w.get<TestComponent>(e) == nullptr);
         int c = 0;
-        w.update<TestComponent>(e, [&](TestComponent * ){
-            c++;
-        });
+        w.update<TestComponent>(
+            e, [&](TestComponent *) {
+                c++;
+            }
+        );
         CHECK(c == 0);
     }
 
@@ -286,14 +290,16 @@ TEST_SUITE("World")
             uint32_t a;
         };
 
-        struct BloatWith : ecs::Relation { };
+        struct BloatWith : ecs::Relation
+        {
+        };
 
         ecs::World world;
         auto prefab = world.newEntity();
         auto prefabBoss = world.newEntity();
-        prefabBoss.set<BloatBoss>( {.b = 2});
-        prefab.set<Bloat>( {.a = 11});
-        prefab.set<BloatWith>( {{.entity = prefabBoss.id}});
+        prefabBoss.set<BloatBoss>({.b = 2});
+        prefab.set<Bloat>({.a = 11});
+        prefab.set<BloatWith>({{.entity = prefabBoss.id}});
         prefab.add<ecs::Prefab>();
 
         SUBCASE("Instantiate") {
@@ -310,7 +316,7 @@ TEST_SUITE("World")
             CHECK(j.get<BloatWith>()->entity == prefabBoss.id);
         }
         SUBCASE("Instantiate should remove name") {
-            world.set<ecs::Name>(prefab.id, { std::string{"abcd"} });
+            world.set<ecs::Name>(prefab.id, {std::string{"abcd"}});
             auto i = world.instantiate(prefab.id);
             CHECK(i.has<Bloat>());
             CHECK(!i.has<ecs::Name>());
@@ -376,9 +382,8 @@ TEST_SUITE("World")
 
         SUBCASE("Set") {
             {
-                auto f = [&e]()
-                {
-                    e.setDeferred<TestComponent2>( {.y = 5, .z = "Hello"});
+                auto f = [&e]() {
+                    e.setDeferred<TestComponent2>({.y = 5, .z = "Hello"});
                 };
 
                 f();
@@ -392,9 +397,8 @@ TEST_SUITE("World")
 
         SUBCASE("Set 2") {
             {
-                auto f = [&e]()
-                {
-                    e.setDeferred<TestComponent>( {.x=5});
+                auto f = [&e]() {
+                    e.setDeferred<TestComponent>({.x=5});
                 };
 
                 f();
@@ -457,8 +461,7 @@ TEST_SUITE("World")
             assert(!w.has(e, dce));
         }
 
-        SUBCASE("EntityHandle Interface")
-        {
+        SUBCASE("EntityHandle Interface") {
             auto e = w.newEntity();
             e.addParent(dce);
             assert(e.hasParent(dce));
@@ -467,7 +470,8 @@ TEST_SUITE("World")
         }
     }
 
-    TEST_CASE("Component Description"){
+    TEST_CASE("Component Description")
+    {
         ecs::World w;
 
         auto e = w.newEntity("Fred");
@@ -475,7 +479,8 @@ TEST_SUITE("World")
         CHECK(e.description() == "Fred");
     }
 
-    TEST_CASE("Entity operator bool") {
+    TEST_CASE("Entity operator bool")
+    {
         ecs::World w;
 
         auto e = w.newEntity("Fred");
@@ -487,14 +492,18 @@ TEST_SUITE("World")
     {
         ecs::World w;
 
-        struct C1{};
-        struct C2{};
+        struct C1
+        {
+        };
+        struct C2
+        {
+        };
 
-        auto e = w.newEntity().add<C1>(). add<C2>();
+        auto e = w.newEntity().add<C1>().add<C2>();
         int j = 0;
-        for(auto c: e) {
+        for (auto c: e) {
             j++;
-            (void)c;
+            (void) c;
         }
         CHECK(j == 2);
     }
@@ -532,15 +541,20 @@ TEST_SUITE("World")
 
         CHECK(e.get<TestComponent>() == nullptr);
         int c = 0;
-        e.update<TestComponent>( [&](TestComponent * ){
-            c++;
-        });
+        e.update<TestComponent>(
+            [&](TestComponent *) {
+                c++;
+            }
+        );
         CHECK(c == 0);
     }
 
     TEST_CASE("Singletons")
     {
-        struct C1 {int x;};
+        struct C1
+        {
+            int x;
+        };
         ecs::World w;
 
         w.setSingleton<C1>({9});
@@ -557,8 +571,12 @@ TEST_SUITE("World")
 
     TEST_CASE("Get Related")
     {
-        struct C1 {int x;};
-        struct C2: ecs::Relation {
+        struct C1
+        {
+            int x;
+        };
+        struct C2 : ecs::Relation
+        {
 
         };
 
@@ -579,7 +597,10 @@ TEST_SUITE("World")
 
     TEST_CASE("World Iterator")
     {
-        struct C1 {int x;};
+        struct C1
+        {
+            int x;
+        };
         //struct C2 {int y;};
         //struct C3 {int z;};
 
@@ -589,15 +610,15 @@ TEST_SUITE("World")
         //auto e2 = w.newEntity().add<C2>();
         //auto e3 = w.newEntity().add<C3>();
 
-        for(auto & a: w) {
+        for (auto & a: w) {
             auto t = w.getTableForArchetype(a.id);
-            if(w.getEntityArchetypeDetails(e1).id == a.id){
+            if (w.getEntityArchetypeDetails(e1).id == a.id) {
 
                 CHECK(t->hasComponent(w.getComponentId<C1>()));
 
                 size_t c = 0;
-                for(auto e: *t){
-                    (void)e;
+                for (auto e: *t) {
+                    (void) e;
                     c++;
                 }
                 CHECK(c == 1);
@@ -623,8 +644,12 @@ TEST_SUITE("World")
     {
         ecs::World w;
 
-        struct C1 {};
-        struct C2 {};
+        struct C1
+        {
+        };
+        struct C2
+        {
+        };
 
         auto dc = w.newEntity("Fred").add<C1>();
 
@@ -635,17 +660,18 @@ TEST_SUITE("World")
 
         e.addParent(dc);
 
-        auto q = w.createQuery({ dc.id });
+        auto q = w.createQuery({dc.id});
         auto res = w.getResults(q.id);
         CHECK(res.count() == 1);
-        res.each<>([&](ecs::EntityHandle eq)
-            {
+        res.each<>(
+            [&](ecs::EntityHandle eq) {
                 CHECK(eq == e);
-            });
+            }
+        );
 
         auto ad = w.getEntityArchetypeDetails(e);
         auto tab = w.getTableForArchetype(ad.id);
-        (void)tab;
+        (void) tab;
         e.removeParent(dc);
         CHECK(!e.hasParent(dc));
         dc.removeAsParent();
@@ -662,18 +688,25 @@ TEST_SUITE("World")
         CHECK(e.has<C2>());
     }
 
-    TEST_CASE("Filters") {
+    TEST_CASE("Filters")
+    {
         ecs::World w;
 
-        struct C1 {};
-        struct C2 {};
-        struct C3 {};
+        struct C1
+        {
+        };
+        struct C2
+        {
+        };
+        struct C3
+        {
+        };
 
         auto e1 = w.newEntity().add<C1>();
         auto e2 = w.newEntity().add<C2>();
         auto e3 = w.newEntity().add<C1>().add<C2>();
 
-        (void)e2;
+        (void) e2;
 
         SUBCASE("Empty") {
             auto f = w.createFilter();
@@ -683,40 +716,40 @@ TEST_SUITE("World")
         SUBCASE("With Single") {
             auto f = w.createFilter(w.makeComponentList<C1>());
             CHECK(f.count() == 2);
-            for(auto tv: f) {
+            for (auto tv: f) {
                 auto c1 = tv.getColumn<C1>();
                 auto c2 = tv.getColumn<C2>();
-                for(auto row: tv) {
+                for (auto row: tv) {
                     auto c3 = tv.rowComponent<C2>(row);
-                    (void)c3;
+                    (void) c3;
                 }
-                (void)c1;
-                (void)c2;
+                (void) c1;
+                (void) c2;
             }
         }
 
         SUBCASE("With multiple") {
             auto f2 = w.createFilter(w.makeComponentList<C1, C2>());
             CHECK(f2.count() == 1);
-            std::vector<ecs::entity_t > ev;
+            std::vector<ecs::entity_t> ev;
             f2.toVector(ev);
             CHECK(ev.size() == 1);
             CHECK(ev[0] == e3.id);
         }
 
-        SUBCASE("Using each")
-        {
+        SUBCASE("Using each") {
             auto f = w.createFilter(w.makeComponentList<C1>());
-            f.each([](ecs::EntityHandle e){
-                CHECK(e.isAlive());
-            })  ;
+            f.each(
+                [](ecs::EntityHandle e) {
+                    CHECK(e.isAlive());
+                }
+            );
         }
 
-        SUBCASE("With without")
-        {
+        SUBCASE("With without") {
             auto f = w.createFilter(w.makeComponentList<C1>(), w.makeComponentList<C2>());
             CHECK(f.count() == 1);
-            std::vector<ecs::entity_t > ev;
+            std::vector<ecs::entity_t> ev;
             f.toVector(ev);
             CHECK(ev.size() == 1);
             CHECK(ev[0] == e1.id);
@@ -727,8 +760,12 @@ TEST_SUITE("World")
     {
         ecs::World w;
 
-        struct C1 {};
-        struct C2 {};
+        struct C1
+        {
+        };
+        struct C2
+        {
+        };
 
         auto e1 = w.newEntity().add<C1>().setAsParent();
         auto e2 = w.newEntity().add<C2>();
@@ -748,17 +785,194 @@ TEST_SUITE("World")
     {
         ecs::World w;
 
-        struct C1 {};
+        struct C1
+        {
+            int x;
+        };
 
-        auto e = w.newEntity();
-        e.add<ecs::EntityQueue>();
+        auto eq = w.createEntityQueue();
+        SUBCASE("On Remove") {
+            eq.triggerOnRemove<C1>();
 
-        w.addRemoveTrigger<C1>(e);
+            auto e1 = w.newEntity();
+            e1.add<C1>();
+            e1.remove<C1>();
 
-        auto e1 = w.newEntity();
-        e1.add<C1>();
+            int c = 0;
+            eq.each(
+                [&](ecs::EntityHandle h) {
+                    CHECK(h == e1);
+                    c++;
+                    return true;
+                }
+            );
+            CHECK(c == 1);
+            eq.each(
+                [&](ecs::EntityHandle) {
+                    c++;
+                    return true;
+                }
+            );
+            CHECK(c == 1);
 
-        e1.remove<C1>();
+            eq.destroy();
+            e1.add<C1>();
+            e1.remove<C1>();
 
+            eq.each(
+                [&](ecs::EntityHandle) {
+                    c++;
+                    return true;
+                }
+            );
+            CHECK(c == 1);
+        }
+
+        SUBCASE("On Add") {
+            eq.triggerOnAdd<C1>();
+
+            auto e1 = w.newEntity();
+            e1.add<C1>();
+
+            int c = 0;
+            eq.each(
+                [&](ecs::EntityHandle h) {
+                    CHECK(h == e1);
+                    c++;
+                    return true;
+                }
+            );
+            CHECK(c == 1);
+            eq.each(
+                [&](ecs::EntityHandle) {
+                    c++;
+                    return true;
+                }
+            );
+            CHECK(c == 1);
+            e1.remove<C1>();
+
+            eq.destroy();
+        }
+
+        SUBCASE("Dont Remove") {
+            eq.triggerOnAdd<C1>();
+
+            auto e1 = w.newEntity();
+            e1.add<C1>();
+
+            int c = 0;
+            eq.each(
+                [&](ecs::EntityHandle h) {
+                    CHECK(h == e1);
+                    c++;
+                    return false;
+                }
+            );
+            CHECK(c == 1);
+            eq.each(
+                [&](ecs::EntityHandle) {
+                    c++;
+                    return true;
+                }
+            );
+            CHECK(c == 2);
+            eq.destroy();
+        }
+
+        SUBCASE("On Update - Set") {
+            eq.triggerOnUpdate<C1>();
+
+            auto e1 = w.newEntity();
+            e1.add<C1>();
+            e1.set<C1>({2});
+
+            int c = 0;
+            eq.each(
+                [&](ecs::EntityHandle h) {
+                    CHECK(h == e1);
+                    c++;
+                    return true;
+                }
+            );
+            CHECK(c == 1);
+            eq.each(
+                [&](ecs::EntityHandle) {
+                    c++;
+                    return true;
+                }
+            );
+            CHECK(c == 1);
+            e1.remove<C1>();
+
+            eq.destroy();
+        }
+
+        SUBCASE("On Update - Update") {
+            eq.triggerOnUpdate<C1>();
+
+            auto e1 = w.newEntity();
+            e1.add<C1>();
+            e1.update<C1>(
+                [](C1 * c) {
+                    c->x = 3;
+                }
+            );
+
+            int c = 0;
+            eq.each(
+                [&](ecs::EntityHandle h) {
+                    CHECK(h == e1);
+                    c++;
+                    return true;
+                }
+            );
+            CHECK(c == 1);
+            eq.each(
+                [&](ecs::EntityHandle) {
+                    c++;
+                    return true;
+                }
+            );
+            CHECK(c == 1);
+            e1.remove<C1>();
+
+            eq.destroy();
+        }
+
+        SUBCASE("On Update - Query") {
+            auto e1 = w.newEntity();
+            e1.add<C1>();
+            e1.update<C1>(
+                [](C1 * c) {
+                    c->x = 3;
+                }
+                );
+
+            eq.triggerOnUpdate<C1>();
+
+            auto q = w.createQuery<C1>();
+            w.getResults(q.id).each<C1>([](ecs::EntityHandle , const C1 * ){
+
+            });
+            int c = 0;
+            eq.each(
+                [&](ecs::EntityHandle ) {
+                    c++;
+                    return true;
+                }
+                );
+            CHECK(c == 0);
+            w.getResults(q.id).each<C1>([](ecs::EntityHandle , C1 * ){
+
+            });
+            eq.each(
+                [&](ecs::EntityHandle) {
+                    c++;
+                    return true;
+                }
+                );
+            CHECK(c == 1);
+        }
     }
 }

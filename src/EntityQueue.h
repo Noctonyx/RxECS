@@ -39,7 +39,6 @@ namespace ecs {
     class World;
 
     struct EntityQueue {
-        static std::mutex mutex;
 
         struct Entry {
             entity_t entity;
@@ -47,12 +46,14 @@ namespace ecs {
         };
 
         World * world;
-
-        std::vector<Entry> entries;
+        std::vector<Entry> entries{};
+        std::mutex mutex{};
 
         void add(entity_t id);
         void remove(entity_t id);
         void each(std::function<bool(EntityHandle)> && f);
+
+        EntityQueue(World * world);
     };
 }
 #endif //INDUSTRONAUT_ENTITYQUEUE_H

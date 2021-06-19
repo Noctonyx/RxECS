@@ -23,18 +23,46 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#pragma once
+//
+// Created by shane on 19/06/2021.
+//
 
-#include "Entity.h"
-#include "World.h"
-#include "System.h"
-#include "EntityHandle.h"
-#include "QueryImpl.h"
-#include "SystemImpl.h"
-#include "EntityImpl.h"
-#include "Filter.h"
-#include "TableViewImpl.h"
-#include "ColumnImpl.h"
-#include "EntityQueue.h"
+#ifndef INDUSTRONAUT_ENTITYQUEUEIMPL_H
+#define INDUSTRONAUT_ENTITYQUEUEIMPL_H
+
 #include "EntityQueueHandle.h"
-#include "EntityQueueImpl.h"
+#include "EntityQueue.h"
+#include "World.h"
+
+namespace ecs
+{
+    template<class T>
+    EntityQueueHandle & EntityQueueHandle::triggerOnRemove()
+    {
+        world->addRemoveTrigger<T>(id);
+        return *this;
+    }
+
+    template<class T>
+    EntityQueueHandle & EntityQueueHandle::triggerOnAdd()
+    {
+        world->addAddTrigger<T>(id);
+        return *this;
+    }
+
+    template<class T>
+    EntityQueueHandle & EntityQueueHandle::triggerOnUpdate()
+    {
+        world->addUpdateTrigger<T>(id);
+        return *this;
+    }
+
+    template<class T>
+    EntityQueueHandle & EntityQueueHandle::removeTriggerOnRemove()
+    {
+        world->removeRemoveTrigger<T>(id);
+        return *this;
+    }
+}
+
+#endif //INDUSTRONAUT_ENTITYQUEUEIMPL_H

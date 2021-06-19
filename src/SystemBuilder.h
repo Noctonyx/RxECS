@@ -58,9 +58,6 @@ namespace ecs
         SystemBuilder& withRelation();
 
         template <class ... TArgs>
-        SystemBuilder& withOptional();
-
-        template <class ... TArgs>
         SystemBuilder& withSingleton();
 
         SystemBuilder& withInheritance(bool inherit);

@@ -30,10 +30,12 @@
 #include <algorithm>
 #include "EntityQueue.h"
 #include "EntityHandle.h"
+#include "EntityQueueHandle.h"
+#include "World.h"
 
 namespace ecs
 {
-    std::mutex EntityQueue::mutex;
+    //std::mutex EntityQueue::mutex;
 
     void EntityQueue::add(entity_t id)
     {
@@ -59,6 +61,8 @@ namespace ecs
 
     void EntityQueue::each(std::function<bool(EntityHandle)> && f)
     {
+        std::lock_guard g(mutex);
+
         for (auto & e: entries) {
             if (!e.removed) {
                 auto r = f(EntityHandle{e.entity, world});
@@ -67,5 +71,32 @@ namespace ecs
                 }
             }
         }
+
+        if (!entries.empty()) {
+            decltype(entries) clean;
+            std::copy_if(
+                entries.begin(), entries.end(), std::back_inserter(clean), [](auto i) {
+                    return !i.removed;
+                }
+            );
+            entries = std::move(clean);
+        }
+    }
+
+    EntityQueue::EntityQueue(World * world)
+        : world(world)
+    {}
+
+    void EntityQueueHandle::each(std::function<bool(EntityHandle)> && f)
+    {
+        auto eq = world->getEntityQueue(id);
+        if (eq) {
+            eq->each(std::move(f));
+        }
+    }
+
+    void EntityQueueHandle::destroy()
+    {
+        world->destroyEntityQueue(id);
     }
 }

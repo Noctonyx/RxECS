@@ -50,9 +50,6 @@ namespace ecs
         QueryBuilder& withPrefabs();
 
         template <class ... TArgs>
-        QueryBuilder& withOptional();
-
-        template <class ... TArgs>
         QueryBuilder& withSingleton();
 
         QueryBuilder& withInheritance(bool inherit);

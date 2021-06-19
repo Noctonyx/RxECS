@@ -113,24 +113,6 @@ namespace ecs
     }
 
     template<class ... TArgs>
-    SystemBuilder & SystemBuilder::withOptional()
-    {
-        world->markSystemsDirty();
-
-        assert(q);
-        qb.withOptional<TArgs ...>();
-
-        std::array<component_id_t, sizeof...(TArgs)> comps = {world->getComponentId<TArgs>()...};
-        world->update<System>(id, [&](System * sp){
-            for (auto value : comps) {
-                sp->reads.insert(value);
-            }
-        });
-
-        return *this;
-    }
-
-    template<class ... TArgs>
     SystemBuilder & SystemBuilder::withSingleton()
     {
         world->markSystemsDirty();

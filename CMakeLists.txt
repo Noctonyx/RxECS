@@ -37,7 +37,9 @@ add_library(RxECS STATIC
     src/ColumnImpl.h
     src/EntityQueue.h
     src/EntityQueue.cpp
-)
+    src/EntityQueueHandle.h
+    src/EntityQueueImpl.h
+    )
 
  add_executable(RxECS_tests 
     test/TestMain.cpp

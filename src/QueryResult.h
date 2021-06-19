@@ -102,11 +102,15 @@ namespace ecs
 
         uint64_t updatedAfter = 0;
         uint32_t processed = 0;
+
+        std::unordered_map<component_id_t, std::vector<EntityQueue *>> updateTriggers;
+
     public:
         uint32_t total;
         //bool valid;
 
-        uint32_t getProcessed() const { return processed;  }
+        uint32_t getProcessed() const
+        { return processed; }
 
         QueryResult(World * world,
                     const std::vector<Table *> & tableList,
@@ -194,9 +198,12 @@ namespace ecs
 
         template<typename ... U, typename Func>
         uint32_t eachView(Func && f,
-                      const std::array<component_id_t, sizeof...(U)> & comps,
-                      const std::array<bool, sizeof...(U) + 1> & mp,
-                      const TableView & view) const;
+                          const std::array<component_id_t, sizeof...(U)> & comps,
+                          const std::array<bool, sizeof...(U) + 1> & mp,
+                          const TableView & view) const;
+
+        template<int I>
+        void setupUpdateTriggerLists(std::array<component_id_t, I> & comps, const std::array<bool, I + 1> & mp);
     };
 
     template<typename Tuple, std::size_t I>
@@ -247,17 +254,17 @@ namespace ecs
 
     template<typename ... U, typename Func>
     uint32_t QueryResult::eachView(Func && f,
-                               const std::array<component_id_t, sizeof...(U)> & comps,
-                               const std::array<bool, sizeof...(U) + 1> & mp,
-                               const TableView & view) const
+                                   const std::array<component_id_t, sizeof...(U)> & comps,
+                                   const std::array<bool, sizeof...(U) + 1> & mp,
+                                   const TableView & view) const
     {
         uint32_t proc = 0;
         auto columns = view.getColumns<U...>(comps);
 
         for (auto row: view) {
             entity_t ent = view.entity(row);
-            if(updatedAfter > 0) {
-                if(world->entities[index(ent)].updateSequence <= updatedAfter) {
+            if (updatedAfter > 0) {
+                if (world->entities[index(ent)].updateSequence <= updatedAfter) {
                     continue;
                 }
             }
@@ -269,6 +276,15 @@ namespace ecs
                 std::make_index_sequence<sizeof...(U)>()
             );
             std::apply(f, result);
+            for(auto c: comps) {
+                auto it = updateTriggers.find(c);
+                if(it != updateTriggers.end()) {
+                    //auto & v = it->second;
+                    for(auto t: it->second) {
+                        t->add(ent);
+                    }
+                }
+            }
             proc++;
         }
 
@@ -282,6 +298,8 @@ namespace ecs
             world->getComponentId<std::remove_const_t<U>>()...
         };
         auto mp = get_mutable_parameters(f);
+
+        setupUpdateTriggerLists(comps, mp);
 
         auto job = world->jobInterface;
 
@@ -308,6 +326,24 @@ namespace ecs
         } else {
             for (auto & view: *this) {
                 processed += eachView<U...>(f, comps, mp, view);
+            }
+        }
+    }
+
+    template<int I>
+    void QueryResult::setupUpdateTriggerLists(std::array<component_id_t, I> & comps,
+                                              const std::array<bool, I + 1> & mutableParameters)
+    {
+        uint32_t i = 0;
+        for (auto & c: comps) {
+            if (mutableParameters[i + 1]) {
+                auto cd = world->getComponentDetails(c);
+                for (auto updateTrigger: cd->onUpdates) {
+                    auto eq = world->getEntityQueue(updateTrigger);
+                    if (eq) {
+                        updateTriggers[c].push_back(eq);
+                    }
+                }
             }
         }
     }
