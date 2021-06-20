@@ -65,3 +65,6 @@ endif ()
 set_target_properties(RxECS PROPERTIES CXX_STANDARD 20)
 set_target_properties(RxECS_tests PROPERTIES CXX_STANDARD 20)
 
+#enable_testing()
+add_test(NAME RxECS WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND RxECS_tests)
+

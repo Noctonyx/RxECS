@@ -169,6 +169,12 @@ namespace ecs
         Table::copyEntity(this, tables[prefabAt].get(), tables[trans.to_at].get(), prefab, e.id,
                           trans);
         entities[index(e.id)].archetype = trans.to_at;
+        auto ad = am.getArchetypeDetails(trans.to_at);
+        for(auto tc: ad.components) {
+            auto * cd = getUpdate<Component>(tc);
+            postEntity(e, cd->onAdds);
+            postEntity(e, cd->onUpdates);
+        }
         return e;
     }
 

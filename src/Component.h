@@ -125,7 +125,7 @@ namespace ecs
         std::span<const T> source_components(static_cast<const T *>(src), count);
 
         for (uint32_t i = 0; i < dest_components.size(); i++) {
-            dest_components[i] = source_components[i];
+            std::construct_at(&dest_components[i], source_components[i]);
         }
     }
 
